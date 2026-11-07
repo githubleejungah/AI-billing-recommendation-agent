@@ -1,4 +1,4 @@
-# 요구사항과 설계 결정 (v3.3, 2026-11-07 G1 변경 3 승인)
+# 요구사항과 설계 결정 (v3.4, 2026-11-07 G1 변경 3 승인 후 결함 수정)
 
 `[결정 필요]` 표시는 사용자 확인을 기다리는 항목입니다. G1 승인(2026-11-07)으로 v2.3의 결정 필요 항목은 모두 확정되었습니다. 이 문서는 SDD 골격(명세 → 계획 → 사람 검토 → 구현)의 **명세**입니다. 실행 계획은 [plan.md](plan.md), 작업 단위는 [tasks.md](tasks.md), 데이터 보안 정책은 [security.md](security.md)에 있습니다.
 
@@ -13,6 +13,7 @@
 | v3.1 | 2026-11-07 | 그래프 해설 문장(VIZ-04) 추가. 사용자 제안. 문장 틀에 시뮬레이터 값을 채우는 방식(결정 28) | 사용자 요청 (2026-11-07) |
 | v3.2 | 2026-11-07 | **성수기 사전 알림과 계절 반영 예측.** 사용자 제안. 분석 범위 24개월, 성수기 판정(SIM-07), 계절 반영 예측(SIM-08), 성수기 알림(PRO-07~09), 검토서의 다가오는 성수기 항목(DOC-08), 24개월 사용량 그래프(VIZ-05), 일시 상향 후 복귀 예약은 확장(CHG-08). 결정 19 변경, 결정 29~33 | **G1 변경 2 승인 (2026-11-07)** |
 | v3.3 | 2026-11-07 | **과정 자료 대조 결과 반영(포트폴리오·실제 제품 대비).** Azure 배포를 시연 때만 켜는 방식으로 추가(DEP), 운영·개선 순환(OPS: CI, 운영 지표, 개선 절차), 데이터 품질 게이트(DQ), 개발 하네스(HAR: CLAUDE.md, 훅), 하이브리드 검색 후보 확정(KNW-08), API 호출 견고성(AGT-03 변경), 데이터 접근 계층·기준일 설정(RET-04, SIM-09), UI-01 변경. 결정 34~40 | **G1 변경 3 승인 (2026-11-07)** |
+| v3.4 | 2026-11-07 | **결함 수정(T6에서 발견).** 비교 기간(12개월)을 리포트 코드가 아니라 시뮬레이터 결과(`horizon_months`)에 넣는다(SIM-01). 이용 기록이 없는 고객(`user_010`)의 리포트가 `{horizon_months}`를 쓰면, 채운 "12"가 시뮬레이터 결과에 없어 두 번째 방어선(REP-02)에 걸려 거부되던 문제 | 사용자 요청 (2026-11-07) |
 | v2.5 | 2026-11-07 | 이벤트 숫자(할인값·기간·마감일·필요 가입 기간·받을 수 없는 이유)를 자리표시자로 리포트에 넣음. 자리표시자 키는 등록 파일(`config/placeholders.toml`)로 관리(REP-02) | 사용자 승인 (2026-11-07) |
 | v2.4 | 2026-11-07 | 초과 단가 조정(5장 3번): 절감액이 비현실적으로 크다는 검토에 따라 변경. 시나리오 고객 3명(`user_005`, `user_013`, `user_019`)의 사용량과 테스트 기대값은 T3에서 다시 맞춤 | **사용자 승인 (2026-11-07)** |
 
@@ -169,7 +170,7 @@ DB가 아니라 마크다운 파일입니다. 리포트의 **문장 근거**(왜
 - **RET-04** (v3.3) 계산 프로그램·서류·변경 모듈은 청구 데이터를 데이터 접근 모듈 한 곳을 거쳐서만 읽는다. 가상 SQLite를 실제 청구 시스템(읽기 전용 복제본이나 API)으로 바꿀 때 이 모듈만 바꾸면 되게 한다.
 
 ### 시뮬레이션 (SIM)
-- **SIM-01** 시뮬레이터는 2장의 계산 규칙으로 요금제별 월 청구액과 12개월 총액을 계산해야 한다.
+- **SIM-01** 시뮬레이터는 2장의 계산 규칙으로 요금제별 월 청구액과 12개월 총액을 계산해야 한다. (v3.4) 비교 기간(개월 수)은 결과의 `horizon_months`로 돌려주며, 이용 기록이 없는 고객의 결과에도 넣는다. 리포트의 `{horizon_months}`는 이 값으로 채운다.
 - **SIM-02** 고객이 조건을 만족하지 않는 이벤트는 비교 대상에서 빼야 한다. 조건은 가입 기간, 상위 전환 여부, 유효 기간이다.
 - **SIM-03** 같은 입력이면 항상 같은 결과를 내야 한다.
 - **SIM-04** (v2.1) 시뮬레이터는 2장의 "추천 안정성"을 계산해 결과에 함께 넣어야 한다.
@@ -477,7 +478,7 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | SIM-02 이벤트 조건 | `test_promotion_decides_boundary_case`, `test_same_usage_without_tenure_keeps_plan`, `test_expired_promotion_is_skipped` | 있음 |
 | SIM-03 재현성 | `test_same_seed_same_data`, `test_simulate_tool_matches_simulator_without_name` | 있음 |
 | REP-01 필수 항목 | `test_good_draft_is_filled_with_simulator_values`, `test_missing_required_key_is_rejected`, `test_usage_evidence_is_required` | 완료 (T4, 자리표시자 방식) |
-| REP-02 숫자 | `test_numbers_written_by_ai_are_rejected`(아키텍처 검토 실험 4가지 + 한글 금액), `test_unknown_and_empty_keys_are_rejected`, `test_unit_after_key_is_rejected`, `test_list_numbers_and_alias_are_allowed`, `test_second_line_catches_bad_fill`, `test_number_formats_are_normalized`, `test_registry_matches_simulator_facts`, `test_registry_keys_from_plan`, `test_bad_registry_is_refused`, `test_seasonal_values` | 완료 (T4) |
+| REP-02 숫자 | `test_numbers_written_by_ai_are_rejected`(아키텍처 검토 실험 4가지 + 한글 금액), `test_unknown_and_empty_keys_are_rejected`, `test_unit_after_key_is_rejected`, `test_list_numbers_and_alias_are_allowed`, `test_second_line_catches_bad_fill`, `test_number_formats_are_normalized`, `test_registry_matches_simulator_facts`, `test_registry_keys_from_plan`, `test_bad_registry_is_refused`, `test_seasonal_values`, `test_no_usage_report_can_mention_horizon` | 완료 (T4, v3.4 결함 수정 테스트 추가) |
 | REP-03 기록 없음 | `test_no_usage_gives_no_recommendation`, `test_no_usage_report` | 있음 |
 | REP-04, 05 인용 검증 | `test_citation_must_be_retrieved`, `test_ineligible_promotion_cannot_back_recommendation`, `test_each_section_needs_a_citation` | 완료 (T4) |
 | SIM-04 추천 안정성 | `test_stable_recommendation`, `test_changes_when_usage_rises`, `test_changes_when_usage_falls` | 있음 (T3) |

@@ -324,6 +324,7 @@ def simulate(conn: sqlite3.Connection, user_id: str, as_of: date | None = None) 
         "forecast": expected,
         "activity": activity_trend(usage),
         "seasonality": season,
+        "horizon_months": HORIZON_MONTHS,  # 비교 기간. 리포트의 {horizon_months}는 이 값으로 채운다(SIM-01 v3.4)
     }
     if expected is None:
         return {**result, "status": "no_usage", "options": [], "recommendation": None}

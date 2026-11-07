@@ -220,6 +220,16 @@ def test_no_usage_report(db_path):
     assert report.check_draft("{rec_plan} 요금제를 추천합니다.", sim, {})
 
 
+def test_no_usage_report_can_mention_horizon(db_path):
+    """(v3.4, T6에서 발견) 이용 기록이 없는 고객도 {horizon_months}를 쓰면 두 번째 방어선을 통과해야 한다.
+    비교 기간 12개월은 시뮬레이터 결과(horizon_months)에서 오므로 채운 "12"가 허용된다."""
+    sim = simulation(db_path, "user_010")
+    assert sim["status"] == "no_usage" and sim["horizon_months"] == 12
+    text = report.verify_and_fill("이용 기록이 없어 {horizon_months} 비교를 하지 않습니다. 현재 {current_plan} 요금제입니다.",
+                                  sim, {})
+    assert text == "이용 기록이 없어 12개월 비교를 하지 않습니다. 현재 베이직 요금제입니다."
+
+
 # --- 자리표시자 등록 파일(5.3) ---
 
 def test_registry_matches_simulator_facts(db_path):

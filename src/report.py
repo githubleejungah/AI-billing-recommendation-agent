@@ -74,7 +74,7 @@ def _stability_sentence(sim: dict, by_id: dict) -> str:
 
 def facts(sim: dict) -> dict:
     """자리표시자의 source 이름 → 값. 값이 없으면 None."""
-    out = {"current.plan_name": sim["current_plan_name"], "horizon_months": 12}
+    out = {"current.plan_name": sim["current_plan_name"], "horizon_months": sim["horizon_months"]}
     if sim["status"] != "ok":
         return out
     by_id = {o["plan_id"]: o for o in sim["options"]}
