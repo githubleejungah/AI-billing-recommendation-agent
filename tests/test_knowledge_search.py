@@ -43,7 +43,7 @@ def search_tool(db_path, arguments):
 
 def test_chunks_follow_section_headings(kb):
     ids = [c.chunk_id for c in kb.chunks]
-    assert len(ids) == len(set(ids)) == 46
+    assert len(ids) == len(set(ids)) == 48  # (v3.5) guide_no_usage에 첫 사용 지원 2개 구역 추가(46 → 48)
     first = next(c for c in kb.chunks if c.chunk_id == "promo_pro_upgrade#2")
     assert first.section == "받을 수 있는 조건"
 

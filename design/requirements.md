@@ -516,7 +516,7 @@ v3.5(첫 사용 유도와 장기 이용 혜택)에서 추가한 결정입니다.
 | SEC-12 Slack 가칭 코드 | `test_customer_codes_are_unique_random_and_fixed`, `test_customer_tool_does_not_expose_codes`(코드 표), `test_slack_message_uses_code_not_name`(Slack 메시지), `test_submit_records_request_history_audit_and_message`(셀프 변경 사내 메시지) | 완료 (T3, T4, T11) |
 | SEC-13 허용 모델 | `test_check_model`, `test_preflight_blocks_model_outside_list` | 있음 (T5a) |
 | SEC-14 전송 정책 파일 | `test_policy_loads_with_hash_and_sections`, `test_policy_refuses_to_run_without_approval`, `test_policy_rejects_bad_values`, `test_policy_records_hash_and_change`, `test_policy_matches_simulator_constant` | 있음 (T5a) |
-| SEC-15 추천 이력 | `test_happy_path_produces_report_slack_history_and_log`, `test_no_usage_customer_gets_notice_without_search`, `test_purge_removes_expired_files_and_history`(거래 종료 후 1년) | 있음 (T5). 개별 기록 대신 남길 통계는 T13(OPS-02) |
+| SEC-15 추천 이력 | `test_happy_path_produces_report_slack_history_and_log`, `test_no_usage_customer_searches_guide`, `test_purge_removes_expired_files_and_history`(거래 종료 후 1년) | 있음 (T5). 개별 기록 대신 남길 통계는 T13(OPS-02) |
 | SEC-16 실명 조회 | — | T13 |
 | KNW-01, 02, 04, 06 문서 검색 | `test_chunks_follow_section_headings`, `test_korean_is_indexed_as_two_letter_pieces`, `test_same_query_same_order`, `test_ties_are_broken_by_chunk_id`, `test_top_k_limits`, `test_unrelated_query_returns_nothing`, `test_tool_result_has_no_scores_or_numbers`, `test_short_tenure_customer_is_marked_not_eligible`, `test_eligible_customer_is_marked`, `test_ended_promotion_is_marked`, `test_upgrade_only_promotion_for_current_plan`, `test_no_usage_customer_status_is_unknown` | 있음 (T2) |
 | KNW-03, 05 문서 내용 | `test_amount_and_rate_patterns_catch_examples`, `test_knowledge_has_no_amounts_or_rates`, `test_metadata_ids_exist_in_database`, `test_every_plan_and_promotion_has_a_document` | 있음 (T1) |
@@ -542,7 +542,7 @@ v3.5(첫 사용 유도와 장기 이용 혜택)에서 추가한 결정입니다.
 | KNW-08 하이브리드 검색 | — | T7 |
 | OPS-02~04 운영 지표·개선 순환 | — | T13, T7 |
 | DEP-01~06 배포 | — | T16 |
-| REP-03, 05 (v3.5) 첫 사용 안내·인용 | (예정) `test_no_usage_report_needs_onboarding_citation`, `test_no_usage_customer_searches_guide`(`test_no_usage_customer_gets_notice_without_search`를 바꿈) | T5b (G1 변경 4 후) |
+| REP-03, 05 (v3.5) 첫 사용 안내·인용 | `test_no_usage_report`, `test_no_usage_report_needs_onboarding_citation`, `test_no_usage_customer_searches_guide`(`test_no_usage_customer_gets_notice_without_search`를 바꿈), `test_no_usage_notice_without_citation_is_rewritten_then_rejected` | 완료 (T5b) |
 | REP-06 (v3.5) 이탈 위험 고객 혜택 안내 | (예정) `test_churn_risk_report_has_loyalty_placeholders` | T3d (G1 변경 4 후) |
 | LOY-01~05 (v3.5) 장기 이용 혜택 | (예정) 손으로 계산한 기대값: 단계 경계(5·6·11·12·23·24개월), 비교 기간 중 단계 도달, 요금제를 바꿔도 혜택 유지, 이벤트와 함께 받기, 지문 재기록 | T3d (G1 변경 4 후) |
 | PRO-10, 11 (v3.5) 혜택 공지·단계 도달 알림 | — | T9 (G1 변경 4 후) |

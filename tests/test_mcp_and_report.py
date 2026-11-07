@@ -216,8 +216,29 @@ def test_number_formats_are_normalized():
 
 def test_no_usage_report(db_path):
     sim = simulation(db_path, "user_010")
-    assert report.check_draft("이용 기록이 없어 추천할 수 없습니다. 현재 {current_plan} 요금제입니다.", sim, {}) == []
+    found = search(db_path, "이용 기록이 없는 고객 첫 사용 지원", "user_010")
+    guide = next(i for i in found if i.startswith("guide_no_usage"))
+    good = f"이용 기록이 없어 추천할 수 없습니다. 현재 {{current_plan}} 요금제입니다.\n## 응대 안내\n온보딩 상담을 제안합니다. [근거: {guide}]"
+    assert report.check_draft(good, sim, found) == []
     assert report.check_draft("{rec_plan} 요금제를 추천합니다.", sim, {})
+
+
+def test_no_usage_report_needs_onboarding_citation(db_path):
+    """(v3.5, REP-03·05) 이용 기록이 없는 고객의 응대 안내에는 검색한 근거 인용이 있어야 하고, 이벤트 문서는 인용하지 않는다."""
+    sim = simulation(db_path, "user_010")
+    found = search(db_path, "이용 기록이 없는 고객 첫 사용 지원", "user_010")
+    found.update(search(db_path, "프로 전환 할인 조건", "user_010"))
+    guide = next(i for i in found if i.startswith("guide_no_usage"))
+    promo = next(i for i in found if i.startswith("promo_"))
+    head = "이용 기록이 없어 추천하지 않습니다. 현재 {current_plan} 요금제입니다.\n## 응대 안내\n"
+
+    no_citation = report.check_draft(head + "온보딩 상담을 제안합니다.", sim, found)
+    assert any("'응대 안내' 구역에 근거 인용이 없음" in p for p in no_citation)
+    not_searched = report.check_draft(head + "온보딩 상담을 제안합니다. [근거: guide_no_usage#9]", sim, found)
+    assert any("검색하지 않은 조각" in p for p in not_searched)
+    with_promo = report.check_draft(head + f"온보딩 상담을 제안합니다. [근거: {guide}] [근거: {promo}]", sim, found)
+    assert any("이벤트 문서를 인용" in p for p in with_promo)
+    assert report.check_draft(head + f"온보딩 상담을 제안합니다. [근거: {guide}]", sim, found) == []
 
 
 def test_no_usage_report_can_mention_horizon(db_path):
@@ -225,9 +246,12 @@ def test_no_usage_report_can_mention_horizon(db_path):
     비교 기간 12개월은 시뮬레이터 결과(horizon_months)에서 오므로 채운 "12"가 허용된다."""
     sim = simulation(db_path, "user_010")
     assert sim["status"] == "no_usage" and sim["horizon_months"] == 12
-    text = report.verify_and_fill("이용 기록이 없어 {horizon_months} 비교를 하지 않습니다. 현재 {current_plan} 요금제입니다.",
-                                  sim, {})
-    assert text == "이용 기록이 없어 12개월 비교를 하지 않습니다. 현재 베이직 요금제입니다."
+    found = search(db_path, "이용 기록이 없는 고객 첫 사용 지원", "user_010")
+    guide = next(i for i in found if i.startswith("guide_no_usage"))
+    tail = f"\n## 응대 안내\n온보딩 상담을 제안합니다. [근거: {guide}]"  # (v3.5) 응대 안내 인용 필수
+    text = report.verify_and_fill("이용 기록이 없어 {horizon_months} 비교를 하지 않습니다. 현재 {current_plan} 요금제입니다."
+                                  + tail, sim, found)
+    assert text.startswith("이용 기록이 없어 12개월 비교를 하지 않습니다. 현재 베이직 요금제입니다.")
 
 
 # --- 자리표시자 등록 파일(5.3) ---

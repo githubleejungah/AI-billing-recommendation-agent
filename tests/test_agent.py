@@ -178,14 +178,37 @@ def test_every_request_is_audited_with_hash_and_tokens(conn, pol, paths):
     assert "베타소프트" not in text_all and "근거" not in text_all  # 이름·본문 없음
 
 
-def test_no_usage_customer_gets_notice_without_search(conn, pol, paths):
-    client = FakeClient([text("## 안내\nC1 고객은 이용 기록이 없어 요금제를 추천하지 않습니다. {current_plan} 요금제를 유지합니다.")])
+def onboarding_draft(request):
+    guide = next(i for i in retrieved_ids(request) if i.startswith("guide_no_usage"))
+    return text(f"""## 현재 과금 분석
+C1 고객은 {{current_plan}} 요금제이며 이용 기록이 없어 요금제를 추천하지 않습니다.
+
+## 응대 안내
+시작 안내 자료를 보내고 온보딩 상담을 제안합니다. 처음 쓸 기능 한 가지를 안내하고 다시 연락할 시점을 정합니다. [근거: {guide}]""")
+
+
+def test_no_usage_customer_searches_guide(conn, pol, paths):
+    """(v3.5, REP-03·05) 이용 기록이 없는 고객도 응대 가이드를 검색해 첫 사용 안내를 인용한다."""
+    client = FakeClient([search("이용 기록이 없는 고객 첫 사용 지원"), onboarding_draft])
     result = run(conn, pol, paths, client, user_id="user_010")
     assert result.status == "완료"
-    assert "이용 기록이 없어" in result.report_path.read_text(encoding="utf-8")
+    body = result.report_path.read_text(encoding="utf-8")
+    assert "이용 기록이 없어" in body and "온보딩 상담" in body and "[근거: guide_no_usage#" in body
     assert "상태: 이용 기록 없음" in client.requests[0]["messages"][0]["content"]
+    assert "첫 사용 지원" in client.requests[0]["system"]  # 작성 지시에 첫 사용 안내가 들어감
+    log = json.loads(result.run_log_path.read_text(encoding="utf-8"))
+    assert log["search_count"] == 1
     with history.connect(paths["app_db"]) as app:
         assert app.execute("SELECT action FROM recommendation_history").fetchone()[0] == "no_usage"
+
+
+def test_no_usage_notice_without_citation_is_rewritten_then_rejected(conn, pol, paths):
+    """(v3.5) 근거 인용 없는 안내는 다시 쓰기를 거쳐도 고치지 않으면 내보내지 않는다(REP-05, AGT-05)."""
+    bare = text("## 응대 안내\nC1 고객은 이용 기록이 없어 요금제를 추천하지 않습니다. {current_plan} 요금제입니다.")
+    client = FakeClient([bare, bare])
+    result = run(conn, pol, paths, client, user_id="user_010")
+    assert result.status == "거부" and result.report_path is None
+    assert any("근거 인용이 없음" in p for p in result.problems)
 
 
 # --- 검색 제한(AGT-01) ---

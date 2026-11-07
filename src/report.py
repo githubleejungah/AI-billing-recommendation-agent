@@ -213,6 +213,11 @@ def check_draft(draft: str, sim: dict, retrieved: dict[str, dict], registry: dic
     if sim["status"] != "ok":
         if "기록" not in draft:
             problems.append("이용 기록이 없다는 안내가 없음")
+        # (v3.5) 첫 사용 안내도 근거 인용이 있어야 하고(REP-05), 이벤트 문서로 할인을 권하지 않는다(REP-03, 결정 41).
+        cited = _check_citations(draft, retrieved, problems, needed=("응대 안내",))
+        promos = sorted({c for c in cited if c.startswith("promo_")})
+        if promos:
+            problems.append(f"이용 기록이 없는 고객에게 이벤트 문서를 인용함(할인 대신 첫 사용 안내): {', '.join(promos)}")
         return problems
 
     for name in required_keys(sim, registry):
@@ -222,18 +227,28 @@ def check_draft(draft: str, sim: dict, retrieved: dict[str, dict], registry: dic
         if not any(name in used for name in group):
             problems.append("근거 사용량 자리표시자 없음: " + " 또는 ".join(f"{{{n}}}" for n in group))
 
-    cited_by_section = {}
+    _check_citations(draft, retrieved, problems, needed=("추천", "응대 안내"))
+    return problems
+
+
+SECTION_MATCH = {"추천": lambda t: "추천" in t and "응대" not in t, "응대 안내": lambda t: "응대" in t}
+
+
+def _check_citations(draft: str, retrieved: dict[str, dict], problems: list[str], needed: tuple[str, ...]) -> list[str]:
+    """인용을 검사해 문제를 problems에 더하고, 인용한 조각 ID 목록을 돌려준다(REP-04, 05)."""
+    cited_by_section, cited = {}, []
     for title, body in _sections(draft):
         for chunk_id in CITATION.findall(body):
             cited_by_section.setdefault(title, []).append(chunk_id)
+            cited.append(chunk_id)
             if chunk_id not in retrieved:
                 problems.append(f"이번 분석에서 검색하지 않은 조각 인용: {chunk_id}")
-            elif "추천" in title and "응대" not in title and _is_ineligible(retrieved[chunk_id]):
+            elif SECTION_MATCH["추천"](title) and _is_ineligible(retrieved[chunk_id]):
                 problems.append(f"고객이 받을 수 없는 이벤트의 조각을 추천 근거로 인용: {chunk_id}")
-    for label, match in (("추천", lambda t: "추천" in t and "응대" not in t), ("응대 안내", lambda t: "응대" in t)):
-        if not any(match(title) and ids for title, ids in cited_by_section.items()):
+    for label in needed:
+        if not any(SECTION_MATCH[label](title) and ids for title, ids in cited_by_section.items()):
             problems.append(f"'{label}' 구역에 근거 인용이 없음(REP-05)")
-    return problems
+    return cited
 
 
 def fill(draft: str, sim: dict, registry: dict | None = None) -> str:
