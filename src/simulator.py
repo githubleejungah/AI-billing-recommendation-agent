@@ -13,14 +13,16 @@ import sqlite3
 import statistics
 import sys
 from contextlib import closing
-from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from fractions import Fraction
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "database" / "billing_mock.db"
-AS_OF = date(2026, 11, 1)  # 분석 기준일. 가상 데이터의 마지막 달(2026-10) 다음 날이다.
+import data_access
+import settings
+
+DB_PATH = data_access.DB_PATH
+AS_OF = settings.DEFAULT_AS_OF  # 기본 분석 기준일. 실행할 때는 settings.as_of()(SIM-09)
 FORECAST_MONTHS = 3
 HORIZON_MONTHS = 12
 STABILITY_CHANGE_PCT = 20  # 추천 안정성 계산의 사용량 변화폭(%). T5a에서 정책 파일 값으로 바꾼다.
@@ -31,70 +33,20 @@ SEASON_HIGH_RATIO = Fraction(13, 10)  # 그해 중앙값의 1.3배 이상이면 
 GROWTH_LIMITS = (Fraction(1, 2), Fraction(2))  # 성장률은 0.5~2.0 사이로 자른다
 
 
-class CustomerNotFound(Exception):
-    pass
+# 청구 데이터 읽기는 data_access 한 곳에서 한다(RET-04). 예전 이름으로도 부를 수 있게 그대로 내보낸다.
+CustomerNotFound = data_access.CustomerNotFound
+Plan = data_access.Plan
+Promotion = data_access.Promotion
+connect = data_access.connect
+load_plans = data_access.load_plans
+load_promotions = data_access.load_promotions
+load_customer = data_access.load_customer
 
 
-@dataclass(frozen=True)
-class Plan:
-    plan_id: str
-    plan_name: str
-    base_price: int
-    included_api_calls: int
-    included_storage_gb: float
-    api_overage_per_1k: int
-    storage_overage_per_gb: int
-
-
-@dataclass(frozen=True)
-class Promotion:
-    promo_id: str
-    promo_name: str
-    plan_id: str
-    discount_type: str
-    discount_value: int
-    duration_months: int
-    valid_from: str
-    valid_to: str
-    min_tenure_months: int
-    upgrade_only: bool
-
-
-def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
-    """읽기 전용 연결. 쓰기 쿼리는 SQLite가 거부한다."""
-    if not db_path.exists():
-        raise FileNotFoundError(f"DB가 없습니다: {db_path}. 먼저 python database/init_db.py 를 실행하세요.")
-    conn = sqlite3.connect(f"{db_path.as_uri()}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def load_plans(conn: sqlite3.Connection) -> list[Plan]:
-    rows = conn.execute("SELECT * FROM plans ORDER BY base_price").fetchall()
-    return [Plan(**dict(row)) for row in rows]
-
-
-def load_promotions(conn: sqlite3.Connection) -> list[Promotion]:
-    rows = conn.execute("SELECT * FROM promotions ORDER BY promo_id").fetchall()
-    return [Promotion(**{**dict(row), "upgrade_only": bool(row["upgrade_only"])}) for row in rows]
-
-
-def load_customer(conn: sqlite3.Connection, user_id: str) -> dict:
-    row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
-    if row is None:
-        raise CustomerNotFound(user_id)
-    return dict(row)
-
-
-def load_usage(conn: sqlite3.Connection, user_id: str, as_of: date = AS_OF) -> list[dict]:
+def load_usage(conn: sqlite3.Connection, user_id: str, as_of: date | None = None) -> list[dict]:
     """기준일 전 최근 24개월(ANALYSIS_MONTHS)의 기록."""
-    window = _months_before(as_of, ANALYSIS_MONTHS)
-    rows = conn.execute(
-        "SELECT target_month, api_calls_used, storage_gb_used, active_days FROM usage_logs"
-        " WHERE user_id = ? AND target_month BETWEEN ? AND ? ORDER BY target_month",
-        (user_id, window[0], window[-1]),
-    ).fetchall()
-    return [dict(row) for row in rows]
+    window = _months_before(as_of or settings.as_of(), ANALYSIS_MONTHS)
+    return data_access.load_usage(conn, user_id, window[0], window[-1])
 
 
 def forecast(usage: list[dict]) -> dict | None:
@@ -197,9 +149,9 @@ def month_label(bundle: list[int]) -> str:
     return f"{bundle[0]}월" if len(bundle) == 1 else f"{bundle[0]}~{bundle[-1]}월"
 
 
-def seasonality(usage: list[dict], as_of: date = AS_OF) -> dict:
+def seasonality(usage: list[dict], as_of: date | None = None) -> dict:
     """성수기 판정(SIM-07). 두 해 모두 그해 중앙값의 1.3배 이상인 달(API·스토리지 중 하나라도)만 성수기다."""
-    window = _months_before(as_of, SEASON_MIN_MONTHS)
+    window = _months_before(as_of or settings.as_of(), SEASON_MIN_MONTHS)
     by_month = {row["target_month"]: row for row in usage}
     recorded = sum(1 for month in window if month in by_month)
     if recorded < SEASON_MIN_MONTHS:
@@ -342,7 +294,8 @@ def stability(plans, promotions, current: Plan, expected: dict, tenure: int, as_
     return {"status": status, "change_pct": change_pct, **cases}
 
 
-def simulate(conn: sqlite3.Connection, user_id: str, as_of: date = AS_OF) -> dict:
+def simulate(conn: sqlite3.Connection, user_id: str, as_of: date | None = None) -> dict:
+    as_of = as_of or settings.as_of()
     customer = load_customer(conn, user_id)
     plans = load_plans(conn)
     by_id = {plan.plan_id: plan for plan in plans}

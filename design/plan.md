@@ -350,7 +350,8 @@ ai-billing-recommendation-agent/
 │   └── init_db.py            # 가상 데이터 생성(DB 파일은 저장소에 넣지 않음)
 ├── knowledge/                # 지식 문서(가상, 금액 없음, 메타데이터 포함)
 ├── src/
-│   ├── data_access.py        # 청구 데이터 읽기 한 곳(RET-04, T3c)
+│   ├── data_access.py        # 청구 데이터 읽기 한 곳(RET-04, T3c 완료)
+│   ├── settings.py           # 실행 설정: 분석 기준일 BILLING_AS_OF(SIM-09)
 │   ├── data_quality.py       # 데이터 품질 게이트(DQ, T9)
 │   ├── metrics.py            # 운영 지표(OPS-02, T13)
 │   ├── simulator.py          # 금액 계산 · 추천 안정성 · 월별 일정 · (v2.1) 성수기 판정과 계절 반영 예측

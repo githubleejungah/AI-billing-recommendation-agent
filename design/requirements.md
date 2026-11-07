@@ -176,7 +176,7 @@ DB가 아니라 마크다운 파일입니다. 리포트의 **문장 근거**(왜
 - **SIM-05** (v3.0) 시뮬레이터는 2장의 "월별 일정"을 현재 요금제와 추천 요금제에 대해 계산해야 한다. 12개월 합계는 `total_12m`과 같아야 한다.
 - **SIM-06** (v3.0) 금액은 부가세 별도로 계산한다. 공급가액·세액·합계 계산은 시뮬레이터 결과를 받아 한 곳(서류 모듈)에서만 한다.
 - **SIM-07** (v3.2) 시뮬레이터는 2장의 "성수기 판정"으로 성수기 월과 근거(두 해 각각 그달 사용량이 그해 중앙값의 몇 배인지)를 돌려줘야 한다. 한 해만 높은 달은 성수기가 아니다.
-- **SIM-09** (v3.3) 분석 기준일은 코드에 고정하지 않고 설정 값으로 둔다(기본 2026-11-01). 테스트는 기준일을 명시해 같은 결과를 낸다.
+- **SIM-09** (v3.3) 분석 기준일은 코드에 고정하지 않고 설정 값으로 둔다(환경 변수 `BILLING_AS_OF`, 달의 첫날만 허용, 기본 2026-11-01). 함수에 기준일을 직접 넘기면 그 값이 우선한다. 테스트는 이 변수를 지우고 돈다.
 - **SIM-08** (v3.2) 성수기가 있는 고객은 2장의 "계절 반영 예측"으로 월별 예상 사용량을 만들고, 월별 일정·12개월 총액·추천·추천 안정성을 이 예측으로 계산해야 한다. 결과에 어떤 예측 방법을 썼는지(3개월 평균 / 계절 반영) 넣는다.
 
 ### 리포트 (REP)
@@ -513,8 +513,8 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | DOC-08, VIZ-05 다가오는 성수기·24개월 그래프 | `test_review_has_upcoming_peak_section`, `test_upcoming_peak_in_every_format`(DOC-08), `test_seasonal_captions`, `test_usage_chart_shows_24_months`(VIZ-05) | 완료 (T3b). 화면 표시는 T13 |
 | CHG-08 일시 상향 후 복귀 예약 | — | T11b (확장) |
 | HAR-01~04 개발 하네스 | `test_protected_paths_are_blocked`, `test_normal_work_is_allowed`, `test_bad_input_does_not_block`, `test_tests_run_only_for_code_changes`, `test_settings_register_both_hooks`, `test_claude_md_lists_protected_files` | 있음 (T0b). PC에서 `/hooks` 등록 확인은 사용자 |
-| OPS-01 CI | `.github/workflows/ci.yml` | 첫 push 후 GitHub에서 통과 확인 (T0b) |
-| RET-04, SIM-09 데이터 접근·기준일 | — | T3c |
+| OPS-01 CI | `.github/workflows/ci.yml` | 완료 (T0b). 첫 실행 통과(2026-11-07, 커밋 5bb0109) |
+| RET-04, SIM-09 데이터 접근·기준일 | `test_only_data_access_queries_billing_tables`, `test_simulator_names_point_to_data_access`, `test_load_usage_respects_range`, `test_identity_and_unknown_customer`(RET-04), `test_default_as_of`, `test_as_of_from_environment`, `test_explicit_as_of_wins_over_environment`, `test_invalid_as_of_is_rejected`(SIM-09) | 완료 (T3c) |
 | DQ-01~04 데이터 품질 | — | T9 |
 | AGT-03 API 견고성 | — | T5 |
 | KNW-08 하이브리드 검색 | — | T7 |

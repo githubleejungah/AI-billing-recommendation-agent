@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from mcp.server.mcpserver import MCPServer  # noqa: E402
 
+import data_access  # noqa: E402
 import knowledge  # noqa: E402
 import simulator  # noqa: E402
 
@@ -81,43 +82,43 @@ def chunk_eligibility(chunk: knowledge.Chunk, status: dict[str, dict] | None) ->
     return {"promotions": promos}
 
 
-def build_server(db_path: Path = simulator.DB_PATH, knowledge_dir: Path = knowledge.KNOWLEDGE_DIR) -> MCPServer:
+def build_server(db_path: Path = data_access.DB_PATH, knowledge_dir: Path = knowledge.KNOWLEDGE_DIR) -> MCPServer:
     server = MCPServer("billing-tools")
     kb = knowledge.KnowledgeBase(knowledge_dir)
 
     @server.tool(description="요금제 목록과 기본 제공량, 초과 단가를 돌려준다.")
     def list_plans() -> str:
-        with closing(simulator.connect(db_path)) as conn:
-            return _json([plan.__dict__ for plan in simulator.load_plans(conn)])
+        with closing(data_access.connect(db_path)) as conn:
+            return _json([plan.__dict__ for plan in data_access.load_plans(conn)])
 
     @server.tool(description="이벤트 상품 목록과 적용 조건을 돌려준다.")
     def list_promotions() -> str:
-        with closing(simulator.connect(db_path)) as conn:
-            return _json([promo.__dict__ for promo in simulator.load_promotions(conn)])
+        with closing(data_access.connect(db_path)) as conn:
+            return _json([promo.__dict__ for promo in data_access.load_promotions(conn)])
 
-    @server.tool(description="고객의 현재 요금제, 가입일, 월별 이용 기록(최대 6개월)을 돌려준다.")
+    @server.tool(description="고객의 현재 요금제, 가입일, 월별 이용 기록(최대 24개월)을 돌려준다.")
     def get_customer_usage(user_id: str) -> str:
         if not _valid(user_id):
             return _json(INVALID_USER_ID)
-        with closing(simulator.connect(db_path)) as conn:
+        with closing(data_access.connect(db_path)) as conn:
             try:
-                customer = simulator.load_customer(conn, user_id)
-            except simulator.CustomerNotFound:
+                customer = data_access.load_customer(conn, user_id)
+            except data_access.CustomerNotFound:
                 return _json({"error": "customer_not_found", "user_id": user_id})
             customer.pop("name")
             return _json({**customer, "usage_history": simulator.load_usage(conn, user_id)})
 
     @server.tool(description=(
-        "고객의 최근 3개월 평균 사용량으로 모든 요금제와 받을 수 있는 이벤트의 월 청구액, 12개월 총액, "
+        "고객의 최근 3개월 평균 사용량(2년 연속 성수기가 있으면 달별 계절 반영 예측)으로 모든 요금제와 받을 수 있는 이벤트의 월 청구액, 12개월 총액, "
         "추천 결과와 절감액을 계산한다. 리포트의 금액은 반드시 이 결과의 값만 쓴다."
     ))
     def simulate_plans(user_id: str) -> str:
         if not _valid(user_id):
             return _json(INVALID_USER_ID)
-        with closing(simulator.connect(db_path)) as conn:
+        with closing(data_access.connect(db_path)) as conn:
             try:
                 return _json(_without_name(simulator.simulate(conn, user_id)))
-            except simulator.CustomerNotFound:
+            except data_access.CustomerNotFound:
                 return _json({"error": "customer_not_found", "user_id": user_id})
 
     @server.tool(description=(
@@ -133,10 +134,10 @@ def build_server(db_path: Path = simulator.DB_PATH, knowledge_dir: Path = knowle
         if user_id:
             if not _valid(user_id):
                 return _json(INVALID_USER_ID)
-            with closing(simulator.connect(db_path)) as conn:
+            with closing(data_access.connect(db_path)) as conn:
                 try:
                     status = promotion_status(simulator.simulate(conn, user_id))
-                except simulator.CustomerNotFound:
+                except data_access.CustomerNotFound:
                     return _json({"error": "customer_not_found", "user_id": user_id})
         # 점수는 돌려주지 않는다. 결과는 Claude로 가고, 숫자는 전송 전 검사(SEC-08)의 허용 목록 밖이다.
         results = [{

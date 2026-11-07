@@ -18,6 +18,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import audit
+import data_access
 import captions
 import charts
 import fonts
@@ -60,18 +61,13 @@ def discount_text(promo: simulator.Promotion) -> str:
 # --- 서류 데이터 ---
 
 def _identity(conn: sqlite3.Connection, user_id: str) -> dict:
-    row = conn.execute(
-        "SELECT u.name, c.code FROM users u JOIN customer_codes c USING (user_id) WHERE u.user_id = ?", (user_id,)
-    ).fetchone()
-    if row is None:
-        raise simulator.CustomerNotFound(user_id)
-    return {"name": row[0], "code": row[1]}
+    return data_access.load_identity(conn, user_id)
 
 
 def _promotion(conn: sqlite3.Connection, promo_id: str | None) -> dict | None:
     if not promo_id:
         return None
-    promo = next(p for p in simulator.load_promotions(conn) if p.promo_id == promo_id)
+    promo = next(p for p in data_access.load_promotions(conn) if p.promo_id == promo_id)
     return {"promo_id": promo.promo_id, "name": promo.promo_name, "discount": discount_text(promo),
             "months": promo.duration_months, "valid_to": promo.valid_to,
             "min_tenure": f"{promo.min_tenure_months}개월" if promo.min_tenure_months else "제한 없음"}
@@ -87,7 +83,7 @@ def build_data(conn: sqlite3.Connection, user_id: str, kind: str = "review", cha
     if sim["status"] != "ok":
         raise DocumentError("이용 기록이 없어 서류를 만들 수 없습니다.")
     rec, sched = sim["recommendation"], sim["schedule"]
-    plans = {p.plan_id: p for p in simulator.load_plans(conn)}
+    plans = {p.plan_id: p for p in data_access.load_plans(conn)}
     current_plan = plans[sim["current_plan_id"]]
     promo = _promotion(conn, rec["promo_id"])
 

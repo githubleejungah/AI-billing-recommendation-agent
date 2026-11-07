@@ -16,6 +16,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import audit
+import data_access
 import documents
 import history
 import simulator
@@ -101,7 +102,7 @@ def prepare(conn: sqlite3.Connection, user_id: str, today: date, notification: d
     effective = date.fromisoformat(sim["schedule"]["months"][0] + "-01")  # 다음 청구 주기 첫날
     if today >= effective:
         raise ChangeError("분석 기준일이 지난 계산입니다. 최신 청구 기준으로 다시 분석한 뒤 변경할 수 있습니다.")
-    plans = {p.plan_id: p for p in simulator.load_plans(conn)}
+    plans = {p.plan_id: p for p in data_access.load_plans(conn)}
     baseline, _recommended, saving = data["comparison"]
     quote = {
         "code": data["customer"]["code"],
@@ -159,7 +160,7 @@ def submit(conn: sqlite3.Connection, user_id: str, role: str, quote_sha256: str,
            today: date, app_db: Path = history.APP_DB_PATH, audit_path: Path = audit.AUDIT_PATH,
            request_id: str | None = None) -> dict:
     """변경 접수(CHG-01, 04, 06). 결제 권한자가 확인 화면에서 누를 때만 기록된다."""
-    code = documents._identity(conn, user_id)["code"]
+    code = data_access.load_identity(conn, user_id)["code"]
     if role != ROLE_BILLING_ADMIN:
         audit.record("change_denied", audit_path, code=code, role=role)
         raise PermissionError("요금제 변경은 결제 권한자만 할 수 있습니다. 결제 권한자에게 요청해 주세요.")
@@ -217,7 +218,7 @@ def submit(conn: sqlite3.Connection, user_id: str, role: str, quote_sha256: str,
 def cancel(conn: sqlite3.Connection, user_id: str, request_id: str, role: str, today: date,
            app_db: Path = history.APP_DB_PATH, audit_path: Path = audit.AUDIT_PATH) -> dict:
     """적용일 전까지 취소(CHG-05). 결제 권한자만, 본인 고객의 접수만."""
-    code = documents._identity(conn, user_id)["code"]
+    code = data_access.load_identity(conn, user_id)["code"]
     if role != ROLE_BILLING_ADMIN:
         audit.record("change_cancel_denied", audit_path, code=code, role=role)
         raise PermissionError("변경 취소는 결제 권한자만 할 수 있습니다.")
