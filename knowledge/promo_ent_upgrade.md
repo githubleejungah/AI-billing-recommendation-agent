@@ -3,6 +3,7 @@ doc_id: promo_ent_upgrade
 title: 엔터프라이즈 전환 할인 안내
 plan_ids: PLAN_ENTERPRISE
 promo_ids: PROMO_ENT_UPGRADE
+audience: customer
 ---
 
 # 엔터프라이즈 전환 할인 안내

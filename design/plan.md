@@ -288,7 +288,7 @@ Claude는 아래 키만 쓸 수 있습니다. Claude에는 키 **이름**만 보
 
 - **필수 키**(REP-01): `{current_plan}`, `{current_monthly}`, `{rec_plan}`, 근거 사용량(`{avg_api_calls}` 또는 `{avg_storage_gb}`). 절감액이 0보다 크면 `{saving_monthly}`, `{saving_12m}`. 이벤트가 있으면 `{promo_name}`.
 - 값이 없는 키(예: 이벤트가 없는 고객의 `{promo_name}`)를 쓰면 거부합니다.
-- 키 목록과 예시 값은 T4에서 테스트로 고정합니다. 위 예시 값은 v2.4 단가 기준이며, T3에서 시뮬레이터 테스트의 기대값도 같은 값으로 다시 계산합니다.
+- (T4 완료) 키 목록과 예시 값을 테스트로 고정했습니다. 예시 값은 v2.4 단가 기준입니다. 추천 요금제의 기본 제공량 `{rec_included_api_calls}`, `{rec_included_storage_gb}`를 추가했습니다(하향 추천 설명용).
 
 이벤트 예시 문장: "{promo_name}을 받으면 {promo_months} 동안 기본 요금이 {promo_discount}만큼 줄고, {horizon_months} 기준 {saving_12m}을 절감합니다. 신청은 {promo_valid_to}까지입니다."
 
@@ -300,7 +300,7 @@ Claude는 아래 키만 쓸 수 있습니다. Claude에는 키 **이름**만 보
 
 ```toml
 [keys.promo_discount]
-source = "promotion.discount"      # 시뮬레이터 결과에서 값을 가져오는 경로
+source = "promo.discount"          # 사실 이름. report.facts()가 시뮬레이터 결과를 사실 목록으로 정리한다(T4)
 format = "discount"                # won(원) / count(회) / gb / months(개월) / percent / date / discount(방식에 따라 % 또는 원) / text
 required_when = "promotion"        # always / promotion / saving / never
 local_only = false                 # true면 고객 데이터가 들어 있어 Claude에 키 이름만 보내고 값은 PC 안에서만 채움
@@ -319,7 +319,7 @@ description = "받을 수 없는 이벤트와 이유(고객의 가입 기간 포
 - **값이 이미 시뮬레이터 결과에 있을 때**(예: 이벤트 신청 시작일 `valid_from`): 등록 파일에 키만 추가하면 됩니다. 코드는 고치지 않습니다.
 - **새로운 종류의 조건일 때**(예: 결합 상품 할인, 최소 계약 기간): DB 컬럼과 시뮬레이터 계산이 먼저 필요합니다. 계산이 바뀌므로 명세 변경(SDD 규칙 3)을 거칩니다. 조건 종류가 많아지면 `promotions` 표에 컬럼을 계속 늘리는 대신 조건을 행으로 두는 표(`promo_conditions`: 이벤트, 조건 종류, 값)로 바꾸는 것을 검토합니다(범위 밖).
 
-등록 파일이 바뀌면 테스트가 다음을 확인합니다: 모든 키의 `source`가 시뮬레이터 결과에 실제로 있는지, `format`이 정해진 종류인지, `local_only` 키의 값이 상황 카드에 들어가지 않는지.
+등록 파일이 바뀌면 테스트가 다음을 확인합니다: 모든 키의 `source`가 사실 목록(`report.facts`)에 실제로 있는지, `format`이 정해진 종류인지. `local_only` 키의 값이 상황 카드에 들어가지 않는지는 T5a(상황 카드)에서 확인합니다. (T4) "근거 사용량은 둘 중 하나 이상" 같은 조건은 파일 맨 위의 `required_any`에 둡니다.
 
 **참고(범위 밖)**: 사람이 읽는 안내 문서에도 숫자를 보여야 한다면, 문서에 `{{PROMO_PRO_UPGRADE.discount}}` 같은 표시를 쓰고 화면에 보일 때 DB 값으로 바꿔 넣는 방법이 있습니다. 숫자는 여전히 DB 한 곳에만 있습니다.
 
@@ -333,7 +333,7 @@ ai-billing-recommendation-agent/
 ├── .env.example
 ├── .mcp.json                 # Claude Code에서 자체 MCP 서버 연결(Claude Code가 읽는 위치는 루트의 이 파일뿐)
 ├── config/data_policy.toml   # 전송 정책 · 범주 · 허용 모델 · 보관 기간 · 선별 기준 · 위험 주제(승인 기록 포함)
-├── config/placeholders.toml  # 자리표시자 키 등록(5.3)
+├── config/placeholders.toml  # 자리표시자 키 등록(5.3, T4 완료)
 ├── .streamlit/config.toml    # 접속 주소 127.0.0.1 (UI-01)
 ├── CLAUDE.md                 # 개발 규칙(HAR-01)
 ├── .claude/settings.json     # 훅 등록(HAR-02, 03)

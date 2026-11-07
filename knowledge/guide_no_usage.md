@@ -3,6 +3,7 @@ doc_id: guide_no_usage
 title: 이용 기록이 없거나 적은 고객 응대 가이드
 plan_ids: PLAN_BASIC, PLAN_PRO, PLAN_ENTERPRISE
 promo_ids: 
+audience: internal
 ---
 
 # 이용 기록이 없거나 적은 고객 응대 가이드

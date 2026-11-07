@@ -3,6 +3,7 @@ doc_id: guide_keep
 title: 유지 추천 응대 가이드
 plan_ids: PLAN_BASIC, PLAN_PRO, PLAN_ENTERPRISE
 promo_ids: PROMO_BASIC_LOYAL
+audience: internal
 ---
 
 # 유지 추천 응대 가이드

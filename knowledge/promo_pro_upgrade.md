@@ -3,6 +3,7 @@ doc_id: promo_pro_upgrade
 title: 프로 전환 할인 안내
 plan_ids: PLAN_PRO
 promo_ids: PROMO_PRO_UPGRADE
+audience: customer
 ---
 
 # 프로 전환 할인 안내

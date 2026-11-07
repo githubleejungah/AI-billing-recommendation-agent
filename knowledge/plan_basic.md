@@ -3,6 +3,7 @@ doc_id: plan_basic
 title: 베이직 요금제 안내
 plan_ids: PLAN_BASIC
 promo_ids: 
+audience: customer
 ---
 
 # 베이직 요금제 안내

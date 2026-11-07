@@ -235,6 +235,8 @@ def _compare(plans, promotions, current: Plan, expected: dict, tenure: int, as_o
             "plan_id": plan.plan_id,
             "plan_name": plan.plan_name,
             "is_current": plan.plan_id == current.plan_id,
+            "included_api_calls": plan.included_api_calls,  # 리포트 자리표시자용 기본 제공량(T4)
+            "included_storage_gb": plan.included_storage_gb,
             "monthly": cost,  # 최근 3개월 평균 사용량 기준 월 청구액
             "months_cost": months_cost,  # 비교 기간 달마다의 청구액(할인 전)
             "promotion": None if best_promo is None else {
@@ -243,6 +245,10 @@ def _compare(plans, promotions, current: Plan, expected: dict, tenure: int, as_o
                 "discount_total": best_discount,
                 "monthly_discount": monthly_discount(best_promo, plan),
                 "months": min(best_promo.duration_months, HORIZON_MONTHS),
+                "discount_type": best_promo.discount_type,
+                "discount_value": best_promo.discount_value,
+                "valid_to": best_promo.valid_to,
+                "min_tenure_months": best_promo.min_tenure_months,
             },
             "skipped_promotions": skipped,
             "total_12m": regular_total - best_discount,

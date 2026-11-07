@@ -93,7 +93,7 @@ def test_unrelated_query_returns_nothing(kb, query):
 def test_tool_result_has_no_scores_or_numbers(db_path):
     data = search_tool(db_path, {"query": "프로 전환 할인 조건"})
     assert data["results"] and data["results"][0]["chunk_id"].startswith("promo_pro_upgrade#")
-    assert set(data["results"][0]) == {"chunk_id", "title", "section", "text", "promotions"}
+    assert set(data["results"][0]) == {"chunk_id", "title", "section", "audience", "text", "promotions"}
     assert "score" not in json.dumps(data)
 
 
@@ -136,3 +136,31 @@ def test_no_usage_customer_status_is_unknown(db_path):
 
 def test_unknown_customer(db_path):
     assert search_tool(db_path, {"query": "할인", "user_id": "user_999"})["error"] == "customer_not_found"
+
+
+# --- KNW-07 문서 대상 구분 ---
+
+def test_guides_are_internal_and_others_customer():
+    docs = knowledge.KnowledgeBase().documents()
+    for doc_id, document in docs.items():
+        expected = "internal" if doc_id.startswith("guide_") else "customer"
+        assert document.audience == expected, doc_id
+
+
+def test_customer_search_never_returns_internal_documents():
+    kb = knowledge.KnowledgeBase()
+    for query in ("상향 추천 응대 설명 순서", "이탈 위험 고객 응대", "프로 전환 할인 조건", "하향 변경 유의사항"):
+        for chunk, _score in kb.search(query, 5, audience="customer"):
+            assert chunk.document.audience == "customer", (query, chunk.chunk_id)
+    assert any(c.document.audience == "internal" for c, _ in kb.search("상향 추천 응대 설명 순서", 5))
+
+
+def test_missing_audience_is_refused(tmp_path):
+    (tmp_path / "x.md").write_text("---\ndoc_id: x\ntitle: 제목\n---\n\n## 소제목\n본문\n", encoding="utf-8")
+    with pytest.raises(ValueError):
+        knowledge.KnowledgeBase(tmp_path)
+
+
+def test_tool_marks_audience(db_path):
+    data = search_tool(db_path, {"query": "상향 추천 응대 설명 순서"})
+    assert {r["audience"] for r in data["results"]} == {"internal"}

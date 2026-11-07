@@ -3,6 +3,7 @@ doc_id: policy_plan_change
 title: 요금제 변경 정책
 plan_ids: PLAN_BASIC, PLAN_PRO, PLAN_ENTERPRISE
 promo_ids: PROMO_PRO_UPGRADE, PROMO_ENT_UPGRADE, PROMO_BASIC_LOYAL
+audience: customer
 ---
 
 # 요금제 변경 정책

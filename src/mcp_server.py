@@ -144,6 +144,7 @@ def build_server(db_path: Path = data_access.DB_PATH, knowledge_dir: Path = know
             "chunk_id": chunk.chunk_id,
             "title": chunk.document.title,
             "section": chunk.section,
+            "audience": chunk.document.audience,
             "text": chunk.text,
             **chunk_eligibility(chunk, status),
         } for chunk, _score in kb.search(query, top_k)]

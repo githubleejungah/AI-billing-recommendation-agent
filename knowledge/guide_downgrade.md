@@ -3,6 +3,7 @@ doc_id: guide_downgrade
 title: 하향 추천 응대 가이드
 plan_ids: PLAN_BASIC, PLAN_PRO
 promo_ids: 
+audience: internal
 ---
 
 # 하향 추천 응대 가이드

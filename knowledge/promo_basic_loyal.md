@@ -3,6 +3,7 @@ doc_id: promo_basic_loyal
 title: 베이직 장기 이용 고객 할인 안내
 plan_ids: PLAN_BASIC
 promo_ids: PROMO_BASIC_LOYAL
+audience: customer
 ---
 
 # 베이직 장기 이용 고객 할인 안내

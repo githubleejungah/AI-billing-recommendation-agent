@@ -29,6 +29,7 @@ B = 0.75
 # 값은 eval/retrieval_set.json의 빈 결과 질문과 tests/test_knowledge_search.py의 관련 없는 질문으로 정했다.
 MIN_COVERAGE = 0.25
 MIN_SCORE = 3.0
+AUDIENCES = ("customer", "internal")
 
 FRONT_MATTER = re.compile(r"\A---\n(.*?)\n---\n", re.S)
 WORD = re.compile(r"[0-9A-Za-z]+|[가-힣]+")
@@ -42,6 +43,7 @@ class Document:
     title: str
     plan_ids: tuple[str, ...]
     promo_ids: tuple[str, ...]
+    audience: str = "customer"  # customer: 고객에게 보여도 되는 문서 / internal: 영업 담당자용(KNW-07)
 
 
 @dataclass(frozen=True)
@@ -67,7 +69,10 @@ def parse_document(path: Path) -> tuple[Document, str]:
     def ids(key: str) -> tuple[str, ...]:
         return tuple(v.strip() for v in meta.get(key, "").split(",") if v.strip())
 
-    document = Document(meta["doc_id"], meta["title"], ids("plan_ids"), ids("promo_ids"))
+    audience = meta.get("audience", "")
+    if audience not in AUDIENCES:
+        raise ValueError(f"{path.name}: audience는 {'/'.join(AUDIENCES)} 중 하나여야 합니다(KNW-07)")
+    document = Document(meta["doc_id"], meta["title"], ids("plan_ids"), ids("promo_ids"), audience)
     return document, raw[match.end():]
 
 
@@ -121,7 +126,10 @@ class KnowledgeBase:
                 score += self._idf[term] * freq * (K1 + 1) / (freq + K1 * (1 - B + B * length / self._avg_len))
         return score
 
-    def search(self, query: str, top_k: int = 3) -> list[tuple[Chunk, float]]:
+    def search(self, query: str, top_k: int = 3, audience: str | None = None) -> list[tuple[Chunk, float]]:
+        """audience를 주면 그 대상의 문서만 찾는다. 고객 상담은 audience="customer"로 부른다(KNW-07)."""
+        if audience is not None and audience not in AUDIENCES:
+            raise ValueError(f"audience는 {'/'.join(AUDIENCES)} 중 하나여야 합니다")
         if not 1 <= top_k <= MAX_TOP_K:
             raise ValueError(f"top_k는 1~{MAX_TOP_K}이어야 합니다")
         query_terms = sorted(set(tokenize(query)))
@@ -129,6 +137,8 @@ class KnowledgeBase:
             return []
         hits = []
         for index, chunk in enumerate(self.chunks):
+            if audience is not None and chunk.document.audience != audience:
+                continue
             matched = sum(1 for t in query_terms if t in self._tf[index])
             if matched / len(query_terms) < MIN_COVERAGE:
                 continue

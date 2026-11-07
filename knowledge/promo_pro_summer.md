@@ -3,6 +3,7 @@ doc_id: promo_pro_summer
 title: 여름 프로 할인 안내 (종료된 이벤트)
 plan_ids: PLAN_PRO
 promo_ids: PROMO_PRO_SUMMER
+audience: customer
 ---
 
 # 여름 프로 할인 안내 (종료된 이벤트)

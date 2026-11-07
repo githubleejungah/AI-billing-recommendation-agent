@@ -3,6 +3,7 @@ doc_id: plan_enterprise
 title: 엔터프라이즈 요금제 안내
 plan_ids: PLAN_ENTERPRISE
 promo_ids: 
+audience: customer
 ---
 
 # 엔터프라이즈 요금제 안내

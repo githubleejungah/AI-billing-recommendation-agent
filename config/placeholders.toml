@@ -1,0 +1,219 @@
+# 리포트 자리표시자 등록 파일(REP-02, plan.md 5.3).
+# Claude는 숫자 대신 여기 등록된 키만 쓸 수 있고, 값은 검증을 통과한 뒤 코드가 채운다.
+# 키를 추가할 때 값이 이미 시뮬레이터 결과(아래 source)에 있으면 이 파일만 고친다.
+#
+# source        시뮬레이터 결과를 정리한 사실 목록(report.facts)의 이름
+# format        won(원) / count(회) / gb / months(개월) / percent / date / discount(% 또는 원) / text
+# required_when always / promotion(추천에 이벤트가 있을 때) / saving(12개월 절감액이 0보다 클 때) / never
+# local_only    true면 고객 데이터가 들어 있어 Claude에는 키 이름만 보내고 값은 PC 안에서만 채운다(SEC-07)
+
+# 근거 사용량: 둘 중 하나 이상은 반드시 써야 한다(REP-01).
+required_any = [["avg_api_calls", "avg_storage_gb"]]
+
+[keys.current_plan]
+source = "current.plan_name"
+format = "text"
+required_when = "always"
+description = "현재 요금제"
+
+[keys.current_monthly]
+source = "current.total"
+format = "won"
+required_when = "always"
+description = "현재 요금제의 예상 월 청구액(최근 사용량 기준)"
+
+[keys.current_base]
+source = "current.base"
+format = "won"
+required_when = "never"
+description = "현재 요금제 기본 요금"
+
+[keys.current_api_overage]
+source = "current.api_overage"
+format = "won"
+required_when = "never"
+description = "현재 요금제 API 초과 요금"
+
+[keys.current_storage_overage]
+source = "current.storage_overage"
+format = "won"
+required_when = "never"
+description = "현재 요금제 스토리지 초과 요금"
+
+[keys.avg_api_calls]
+source = "forecast.api_calls"
+format = "count"
+required_when = "never"
+description = "최근 평균 API 호출 수"
+
+[keys.avg_storage_gb]
+source = "forecast.storage_gb"
+format = "gb"
+required_when = "never"
+description = "최근 평균 스토리지"
+
+[keys.forecast_months]
+source = "forecast.months_used"
+format = "months"
+required_when = "never"
+description = "평균을 낸 개월 수"
+
+[keys.forecast_method]
+source = "forecast.method"
+format = "text"
+required_when = "never"
+description = "예측 방법(3개월 평균 / 계절 반영)"
+
+[keys.included_api_calls]
+source = "current.included_api_calls"
+format = "count"
+required_when = "never"
+description = "현재 요금제 기본 제공 API 호출"
+
+[keys.included_storage_gb]
+source = "current.included_storage_gb"
+format = "gb"
+required_when = "never"
+description = "현재 요금제 기본 제공 스토리지"
+
+[keys.rec_plan]
+source = "rec.plan_name"
+format = "text"
+required_when = "always"
+description = "추천 요금제"
+
+[keys.rec_monthly]
+source = "rec.total"
+format = "won"
+required_when = "never"
+description = "추천 요금제의 예상 월 청구액(할인 전)"
+
+[keys.rec_included_api_calls]
+source = "rec.included_api_calls"
+format = "count"
+required_when = "never"
+description = "추천 요금제 기본 제공 API 호출"
+
+[keys.rec_included_storage_gb]
+source = "rec.included_storage_gb"
+format = "gb"
+required_when = "never"
+description = "추천 요금제 기본 제공 스토리지"
+
+[keys.promo_name]
+source = "promo.name"
+format = "text"
+required_when = "promotion"
+description = "추천에 들어간 이벤트 이름"
+
+[keys.promo_discount_total]
+source = "promo.discount_total"
+format = "won"
+required_when = "never"
+description = "이벤트 할인 총액"
+
+[keys.promo_discount]
+source = "promo.discount"
+format = "discount"
+required_when = "never"
+description = "이벤트 할인값(정률이면 %, 정액이면 원)"
+
+[keys.promo_months]
+source = "promo.months"
+format = "months"
+required_when = "never"
+description = "할인 기간"
+
+[keys.promo_valid_to]
+source = "promo.valid_to"
+format = "date"
+required_when = "never"
+description = "이벤트 신청 마감일"
+
+[keys.promo_min_tenure]
+source = "promo.min_tenure_months"
+format = "months"
+required_when = "never"
+description = "이벤트에 필요한 가입 기간"
+
+[keys.skipped_promo_reasons]
+source = "skipped_promotions"
+format = "text"
+required_when = "never"
+local_only = true
+description = "받을 수 없는 이벤트와 이유(고객의 가입 기간 포함)"
+
+[keys.saving_monthly]
+source = "saving.monthly"
+format = "won"
+required_when = "saving"
+description = "월 절감액(할인 전, 달마다 다르면 12개월 평균)"
+
+[keys.saving_12m]
+source = "saving.total_12m"
+format = "won"
+required_when = "saving"
+description = "12개월 절감액"
+
+[keys.saving_pct]
+source = "saving.pct"
+format = "percent"
+required_when = "never"
+description = "12개월 절감률"
+
+[keys.current_total_12m]
+source = "current.total_12m"
+format = "won"
+required_when = "never"
+description = "현재 요금제 유지 12개월 총액"
+
+[keys.rec_total_12m]
+source = "rec.total_12m"
+format = "won"
+required_when = "never"
+description = "추천 12개월 총액"
+
+[keys.horizon_months]
+source = "horizon_months"
+format = "months"
+required_when = "never"
+description = "비교 기간"
+
+[keys.activity_change_pct]
+source = "activity.change_pct"
+format = "percent"
+required_when = "never"
+description = "최근 활동일 변화율(이탈 위험 고객만)"
+
+[keys.stability]
+source = "stability.sentence"
+format = "text"
+required_when = "never"
+description = "추천 안정성 문장(코드가 만듦)"
+
+[keys.peak_months]
+source = "peak.months"
+format = "text"
+required_when = "never"
+local_only = true
+description = "성수기 월(성수기 고객만)"
+
+[keys.peak_deadline]
+source = "peak.deadline"
+format = "date"
+required_when = "never"
+local_only = true
+description = "다음 성수기에 맞추려면 신청해야 하는 마감일"
+
+[keys.peak_bill_current]
+source = "peak.bill_current"
+format = "won"
+required_when = "never"
+description = "다음 성수기 기간 예상 청구액(현재 요금제 유지)"
+
+[keys.peak_evidence]
+source = "peak.evidence"
+format = "text"
+required_when = "never"
+local_only = true
+description = "성수기 근거(두 해의 배수)"

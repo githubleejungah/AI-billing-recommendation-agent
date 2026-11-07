@@ -3,6 +3,7 @@ doc_id: guide_upgrade
 title: 상향 추천 응대 가이드
 plan_ids: PLAN_PRO, PLAN_ENTERPRISE
 promo_ids: PROMO_PRO_UPGRADE, PROMO_ENT_UPGRADE
+audience: internal
 ---
 
 # 상향 추천 응대 가이드

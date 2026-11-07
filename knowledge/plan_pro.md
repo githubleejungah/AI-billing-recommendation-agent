@@ -3,6 +3,7 @@ doc_id: plan_pro
 title: 프로 요금제 안내
 plan_ids: PLAN_PRO
 promo_ids: 
+audience: customer
 ---
 
 # 프로 요금제 안내

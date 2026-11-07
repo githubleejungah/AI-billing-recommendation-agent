@@ -188,9 +188,10 @@ DB가 아니라 마크다운 파일입니다. 리포트의 **문장 근거**(왜
 - **REP-02** (v2.1 변경) 리포트의 금액, 사용량, 비율, 개월 수는 Claude가 쓰지 않는다. Claude는 그 자리에 정해진 자리표시자(예: `{current_monthly}`)만 쓰고, 검증을 통과한 뒤 코드가 시뮬레이터 결과로 채운다. 다음 중 하나라도 있으면 리포트를 내보내지 않는다(fail-closed).
   - 정해진 목록에 없는 자리표시자. (v2.5) 목록은 자리표시자 등록 파일(`config/placeholders.toml`, plan.md 5.3)이 정하며, 키를 추가해도 검증 코드는 바꾸지 않는다.
   - 자리표시자 바깥의 숫자. 예외는 줄 맨 앞의 목록 번호(`1.`)와 고객 별칭(`C1`)뿐이다.
-  - 채운 뒤의 리포트에 도구 결과에 없는 숫자(두 번째 방어선. v2의 숫자 대조를 그대로 쓴다)
+  - 채운 뒤의 리포트에 도구 결과에 없는 숫자(두 번째 방어선. v2의 숫자 대조를 그대로 쓴다). (T4) 채운 값이 아니라 시뮬레이터 결과 원본과 대조해, 채우는 코드의 버그도 잡는다.
+  - (T4) 한글로 쓴 금액("삼십만 원"), 자리표시자 뒤에 단위를 또 쓴 경우("{saving_12m}원")
 - **REP-03** 이용 기록이 없는 고객에 대해서는 추천하지 않고, 그 이유를 알려야 한다.
-- **REP-04** (v2) 리포트가 문서를 인용하면(`[근거: 문서ID#번호]`), 그 조각은 이번 분석에서 검색 도구가 실제로 돌려준 것이어야 한다. (v2.1) 또 "대상 아님"으로 표시된 조각(KNW-06)을 추천 이유의 근거로 인용하면 안 된다. 어기면 리포트를 내보내지 않는다.
+- **REP-04** (v2) 리포트가 문서를 인용하면(`[근거: 문서ID#번호]`), 그 조각은 이번 분석에서 검색 도구가 실제로 돌려준 것이어야 한다. (v2.1) 또 "대상 아님"으로 표시된 조각(KNW-06)을 추천 이유의 근거로 인용하면 안 된다. 어기면 리포트를 내보내지 않는다. (T4) "대상 아님 조각"은 조각이 다루는 이벤트가 **모두** 대상 아님인 조각이다(여러 이벤트를 다루는 응대 가이드는 하나라도 대상이면 쓸 수 있다). 응대 안내 구역에서 "왜 이 이벤트는 안 되는지" 설명하는 데는 인용할 수 있다.
 - **REP-05** (v2) 추천이 있는 리포트에는 "추천 이유"와 "응대 안내"에 근거 인용이 각각 하나 이상 있어야 한다.
 
 ### 보안 (SEC)
@@ -475,10 +476,10 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | SIM-01 계산 규칙 | `test_basic_overage_bomb`, `test_single_extra_call_rounds_up_to_one_unit`, `test_exactly_included_amount_has_no_overage`, `test_upgrade_with_promotion`, `test_downgrade`, `test_enterprise_fixed_discount`, `test_keep_with_loyalty_promotion`, `test_tie_keeps_current_plan`, `test_low_data_flag`, `test_churn_risk`, `test_tenure_counts_whole_months`, `test_all_customers_simulate`, `test_most_random_customers_fit_their_plan` | 있음 (T3에서 단가 v2.4로 기대값 재계산) |
 | SIM-02 이벤트 조건 | `test_promotion_decides_boundary_case`, `test_same_usage_without_tenure_keeps_plan`, `test_expired_promotion_is_skipped` | 있음 |
 | SIM-03 재현성 | `test_same_seed_same_data`, `test_simulate_tool_matches_simulator_without_name` | 있음 |
-| REP-01 필수 항목 | `test_good_report_passes`, `test_missing_required_item_is_rejected` | 있음 → 자리표시자 방식으로 다시 씀(T4) |
-| REP-02 숫자 | `test_invented_number_is_rejected`, `test_report_computed_percentage_is_rejected`, `test_number_formats_are_normalized`(채운 뒤 두 번째 방어선) | 일부 → 자리표시자 검사 추가(T4). 위 실험 4가지를 테스트로 넣음 |
+| REP-01 필수 항목 | `test_good_draft_is_filled_with_simulator_values`, `test_missing_required_key_is_rejected`, `test_usage_evidence_is_required` | 완료 (T4, 자리표시자 방식) |
+| REP-02 숫자 | `test_numbers_written_by_ai_are_rejected`(아키텍처 검토 실험 4가지 + 한글 금액), `test_unknown_and_empty_keys_are_rejected`, `test_unit_after_key_is_rejected`, `test_list_numbers_and_alias_are_allowed`, `test_second_line_catches_bad_fill`, `test_number_formats_are_normalized`, `test_registry_matches_simulator_facts`, `test_registry_keys_from_plan`, `test_bad_registry_is_refused`, `test_seasonal_values` | 완료 (T4) |
 | REP-03 기록 없음 | `test_no_usage_gives_no_recommendation`, `test_no_usage_report` | 있음 |
-| REP-04, 05 인용 검증 | — | T4 |
+| REP-04, 05 인용 검증 | `test_citation_must_be_retrieved`, `test_ineligible_promotion_cannot_back_recommendation`, `test_each_section_needs_a_citation` | 완료 (T4) |
 | SIM-04 추천 안정성 | `test_stable_recommendation`, `test_changes_when_usage_rises`, `test_changes_when_usage_falls` | 있음 (T3) |
 | SEC-01 키는 환경 변수로만 | — | T5 |
 | SEC-02 가상 데이터 | (검토로 확인. 데이터는 `init_db.py`가 만든다) | 해당 없음 |
@@ -491,7 +492,7 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | SEC-09 저장소 비밀값 검사 | `test_secret_detector_catches_fake_values`, `test_no_secrets_in_repository`, `test_gitignore_excludes_secrets_and_customer_outputs`, `test_env_example_has_no_values_for_secrets` | 있음 (T0) |
 | SEC-10 보관과 삭제 | — | T5 |
 | SEC-11 감사 기록 | — | T5a |
-| SEC-12 Slack 가칭 코드 | `test_customer_codes_are_unique_random_and_fixed`, `test_customer_tool_does_not_expose_codes`(코드 표). Slack 메시지 쪽은 T5 | 일부 (T3) |
+| SEC-12 Slack 가칭 코드 | `test_customer_codes_are_unique_random_and_fixed`, `test_customer_tool_does_not_expose_codes`(코드 표), `test_slack_message_uses_code_not_name`(Slack 메시지), `test_submit_records_request_history_audit_and_message`(셀프 변경 사내 메시지) | 완료 (T3, T4, T11) |
 | SEC-13 허용 모델 | — | T5a |
 | SEC-14 전송 정책 파일 | — | T5a |
 | SEC-15 추천 이력 | — | T5 |
@@ -505,7 +506,7 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | UI-01 로컬 전용 | `test_streamlit_binds_localhost_only`(설정 파일) | 일부 (T0). 실제 접속 확인은 T13 |
 | UI-02~09 화면 | — | T8(목업), T13(구현) |
 | SIM-05, 06 월별 일정·부가세 | `test_schedule_starts_next_month_and_applies_discount_only_during_promotion`, `test_schedule_sums_match_twelve_month_totals`(SIM-05). `test_vat_is_ten_percent_rounded_down`, `test_twelve_month_totals_are_sums_of_months`, `test_saving_percent_rounds_half_up`(SIM-06) | 완료 (T3, T10) |
-| KNW-07 문서 대상 구분 | — | T4 |
+| KNW-07 문서 대상 구분 | `test_guides_are_internal_and_others_customer`, `test_customer_search_never_returns_internal_documents`, `test_missing_audience_is_refused`, `test_tool_marks_audience` | 완료 (T4) |
 | EVAL-06 고객 질문 평가 | — | T12, T7 |
 | PRO-01~06 선제 알림 | — | T9 |
 | SIM-07, 08 성수기 판정·계절 반영 예측 | `test_tax_firm_peaks_and_evidence`, `test_gift_shop_peaks_but_growth_months_are_not_peaks`, `test_one_off_spike_is_not_a_peak`, `test_short_history_is_not_judged`, `test_threshold_is_inclusive_and_needs_both_years`, `test_bundles_wrap_around_new_year`(SIM-07), `test_tax_firm_monthly_forecast`, `test_gift_shop_growth_is_applied`, `test_tax_firm_recommendation_changes_with_season`, `test_three_month_average_alone_would_keep_basic`, `test_gift_shop_keeps_plan`, `test_upcoming_peak_and_extra_cost`, `test_growth_is_clamped`, `test_schedule_sums_match_totals_for_seasonal`(SIM-08), `test_existing_200_customers_are_unchanged`(결정 30) | 완료 (T3b) |
