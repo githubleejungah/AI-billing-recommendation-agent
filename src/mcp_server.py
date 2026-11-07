@@ -20,19 +20,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from mcp.server.mcpserver import MCPServer  # noqa: E402
 
 import data_access  # noqa: E402
+import guard  # noqa: E402
 import knowledge  # noqa: E402
 import simulator  # noqa: E402
 
 USER_ID = re.compile(r"user_\d{3}")
 INVALID_USER_ID = {"error": "invalid_user_id", "message": "user_id는 user_001 형식이어야 합니다."}
 
-# 받을 수 없는 이벤트의 이유를 범주로 바꾼다. 원래 문구에는 고객의 가입 기간이 들어 있어
-# 외부로 나가는 결과에는 범주만 쓴다(security.md 5장).
-REASON_CATEGORIES = (
-    ("이용 ", "가입 기간 조건 미달"),
-    ("상위 요금제로 바꿀 때만", "상위 전환에만 적용"),
-    ("이벤트 기간 아님", "이벤트 기간 아님"),
-)
+# 받을 수 없는 이벤트의 이유를 범주로 바꾸는 표는 상황 카드와 같은 것을 쓴다(security.md 5장).
+REASON_CATEGORIES = guard.REASON_CATEGORIES
 
 
 def _json(data) -> str:

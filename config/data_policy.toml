@@ -1,0 +1,70 @@
+# 전송 정책 파일(SEC-14, security.md 5.1).
+# 외부 AI(Claude)로 무엇을 보낼지, 범주 구간, 허용 모델, 보관 기간, 월간 선별 기준, 상담 위험 주제를 정한다.
+# 이 기준은 개발자가 아니라 정보보호·개인정보 책임자가 정한다. 고칠 때는 [approval]을 새로 적는다.
+# 시작할 때 이 파일의 해시를 감사 기록에 남기고, 지난번과 다르면 "정책 변경"으로 따로 기록한다.
+# 비밀값은 넣지 않는다. 변경 이력이 남도록 저장소에 넣는다.
+
+[approval]                      # 이 파일을 승인한 사람과 날짜. 하나라도 비어 있으면 실행하지 않는다.
+approved_by = "정보보호책임자"
+approved_at = "2026-11-07"
+reason = "초기 정책"
+
+[external_ai]                   # Claude로 보낼 수 있는 항목
+send_customer_numbers = false   # 고객 수치(이용량·금액 등). 이 버전은 false만 지원한다.
+send_ratios = false             # 제공량 대비 비율. 요금제 제공량이 공개라 역산할 수 있으므로 금지
+allowed_models = ["claude-sonnet-5-5"]  # 보존 예외가 붙는 모델(Covered Models)은 넣지 않는다(SEC-13)
+
+[categories]                    # 상황 카드의 범주 구간(security.md 5장)
+overage_multiples = [1, 2, 5]   # 기본 제공량 이내 / 2배 미만 / 2~5배 / 5배 이상
+saving_pct = [10, 50]           # 없음 / 10% 미만 / 10~50% / 50% 이상
+stability_change_pct = 20       # 추천 안정성을 볼 때 사용량을 줄이고 늘리는 폭(%)
+peak_increase_multiples = [2]   # 성수기 증가 정도: 1.3~2배 / 2배 이상
+
+[retention_days]                # 보관 기간(security.md 8장)
+reports = 90
+run_logs = 90
+audit = 730
+sent_log = 730
+history_after_contract_end = 365
+tickets_after_close = 1095
+
+[selection]                     # 월간 절감 알림 선별(PRO-02, PRO-05)
+min_saving_12m = 100000         # 12개월 절감액 하한(원, 부가세 별도)
+min_saving_pct = 10             # 절감률 하한(%)
+exclude_low_data = true         # 기록 부족 고객은 고객 알림에서 뺀다
+max_alerts_per_month = 50       # 한 달에 보내는 고객 알림 최대 수(12개월 절감액 순)
+renotify_days = 90              # 같은 추천을 다시 알리지 않는 기간
+
+[peak_alerts]                   # 성수기 사전 알림(PRO-07, 09, 결정 31)
+first_notice_days_before = 45   # 1차 알림: 성수기 첫 달 1일의 며칠 전
+reminder_days_before_deadline = 7  # 마감 전 알림: 신청 마감의 며칠 전
+min_extra_cost = 100000         # 현재 요금제 유지 시 성수기 추가 비용 하한(원, 부가세 별도)
+
+# 상담 위험 주제(ASK-02). 질문에 키워드가 있으면 AI가 답하지 않고 바로 담당자에게 넘긴다.
+[risk_topics.cancellation]
+label = "해지·위약금"
+keywords = ["해지", "위약금", "탈퇴", "계약 해제", "그만 쓰"]
+
+[risk_topics.refund]
+label = "환불"
+keywords = ["환불", "돌려받", "반환"]
+
+[risk_topics.contract_exception]
+label = "계약 예외"
+keywords = ["예외", "특별 할인", "단가 조정", "추가 할인", "깎아"]
+
+[risk_topics.dispute]
+label = "분쟁·법적 문제"
+keywords = ["분쟁", "소송", "법적", "변호사", "소비자원", "신고"]
+
+[risk_topics.other_customer]
+label = "다른 고객 정보"
+keywords = ["다른 고객", "다른 회사", "타사"]
+
+[risk_topics.payment_error]
+label = "결제 오류"
+keywords = ["결제 오류", "이중 결제", "중복 청구", "잘못 청구", "과다 청구", "카드 승인"]
+
+[risk_topics.personal_info]
+label = "개인정보 변경"
+keywords = ["개인정보", "연락처 변경", "주소 변경", "담당자 변경", "사업자 정보"]

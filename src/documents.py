@@ -25,7 +25,7 @@ import fonts
 import history
 import simulator
 
-VAT_RATE_PCT = 10  # T5a에서 정책 파일 값으로 바꾼다.
+VAT_RATE_PCT = 10  # 법정 세율이라 보안 정책 파일이 아니라 코드 상수로 둔다(T5a 검토).
 REVIEW_VALID_DAYS = 30  # CHG-07: 발행 후 30일과 이벤트 신청 마감일 중 이른 날
 KINDS = {"review": ("비용 절감 검토서", "RV"), "confirmation": ("요금제 변경 확인서", "CF")}
 NOTICE = [

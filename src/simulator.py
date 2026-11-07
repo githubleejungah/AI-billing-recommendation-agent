@@ -25,7 +25,7 @@ DB_PATH = data_access.DB_PATH
 AS_OF = settings.DEFAULT_AS_OF  # 기본 분석 기준일. 실행할 때는 settings.as_of()(SIM-09)
 FORECAST_MONTHS = 3
 HORIZON_MONTHS = 12
-STABILITY_CHANGE_PCT = 20  # 추천 안정성 계산의 사용량 변화폭(%). T5a에서 정책 파일 값으로 바꾼다.
+STABILITY_CHANGE_PCT = 20  # 추천 안정성 계산의 사용량 변화폭(%). 정책 파일 categories.stability_change_pct와 같아야 한다(테스트로 확인).
 # (명세 v3.2) 성수기 판정과 계절 반영 예측. T5a에서 정책 파일 값으로 바꾼다.
 ANALYSIS_MONTHS = 24  # 읽는 기록의 범위(최근 24개월)
 SEASON_MIN_MONTHS = 24  # 성수기를 판정하려면 필요한 기록

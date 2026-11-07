@@ -485,16 +485,16 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | SEC-02 가상 데이터 | (검토로 확인. 데이터는 `init_db.py`가 만든다) | 해당 없음 |
 | SEC-03 이름 미전송 | `test_customer_tool_hides_name`(도구 쪽) / API 요청 쪽은 없음 | 일부, T5 |
 | SEC-04 기록에 비밀값 없음 | — | T5 |
-| SEC-05 고객 별칭 | — | T5a |
+| SEC-05 고객 별칭 | `test_aliases_are_per_run` | 있음 (T5a). 도구 실행 직전 ID 복원은 T5 |
 | SEC-06 인젝션 대비 | — | T5 (지시문 문구와 구분 표시를 테스트로 확인) |
-| SEC-07 상황 카드 | — | T5a |
-| SEC-08 전송 전 검사 | — | T5a |
+| SEC-07 상황 카드 | `test_card_for_user_002_matches_security_example`, `test_card_for_seasonal_and_keep_customers`, `test_cards_never_carry_identity_or_customer_numbers`(203명 전원), `test_local_only_values_stay_on_pc`, `test_card_refuses_unknown_values` | 있음 (T5a) |
+| SEC-08 전송 전 검사 | `test_each_rule_blocks`(규칙 1~4), `test_unmasked_question_is_blocked_and_masked_passes`(규칙 5), `test_clean_request_passes`, `test_knowledge_documents_pass_the_screen` | 있음 (T5a) |
 | SEC-09 저장소 비밀값 검사 | `test_secret_detector_catches_fake_values`, `test_no_secrets_in_repository`, `test_gitignore_excludes_secrets_and_customer_outputs`, `test_env_example_has_no_values_for_secrets` | 있음 (T0) |
 | SEC-10 보관과 삭제 | — | T5 |
-| SEC-11 감사 기록 | — | T5a |
+| SEC-11 감사 기록 | `test_preflight_blocks_and_audits_without_content`, `test_preflight_pass_and_record_sent`, `test_policy_records_hash_and_change` | 외부 전송·정책 변경 있음 (T5a). 분석 요청·검증 결과·Slack 전송·삭제는 T5 |
 | SEC-12 Slack 가칭 코드 | `test_customer_codes_are_unique_random_and_fixed`, `test_customer_tool_does_not_expose_codes`(코드 표), `test_slack_message_uses_code_not_name`(Slack 메시지), `test_submit_records_request_history_audit_and_message`(셀프 변경 사내 메시지) | 완료 (T3, T4, T11) |
-| SEC-13 허용 모델 | — | T5a |
-| SEC-14 전송 정책 파일 | — | T5a |
+| SEC-13 허용 모델 | `test_check_model`, `test_preflight_blocks_model_outside_list` | 있음 (T5a) |
+| SEC-14 전송 정책 파일 | `test_policy_loads_with_hash_and_sections`, `test_policy_refuses_to_run_without_approval`, `test_policy_rejects_bad_values`, `test_policy_records_hash_and_change`, `test_policy_matches_simulator_constant` | 있음 (T5a) |
 | SEC-15 추천 이력 | — | T5 |
 | SEC-16 실명 조회 | — | T13 |
 | KNW-01, 02, 04, 06 문서 검색 | `test_chunks_follow_section_headings`, `test_korean_is_indexed_as_two_letter_pieces`, `test_same_query_same_order`, `test_ties_are_broken_by_chunk_id`, `test_top_k_limits`, `test_unrelated_query_returns_nothing`, `test_tool_result_has_no_scores_or_numbers`, `test_short_tenure_customer_is_marked_not_eligible`, `test_eligible_customer_is_marked`, `test_ended_promotion_is_marked`, `test_upgrade_only_promotion_for_current_plan`, `test_no_usage_customer_status_is_unknown` | 있음 (T2) |
@@ -524,7 +524,8 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | CHG-01~07 셀프 변경 | `test_change_module_uses_no_ai`(CHG-01), `test_usage_change_after_confirmation_forces_reconfirm`, `test_tampered_quote_is_rejected`, `test_changed_recommendation_is_shown`(CHG-02), `test_quote_for_user_002_matches_hand_calculation`, `test_quote_equals_simulator_and_review_document`, `test_invoice_info_must_be_confirmed`, `test_downgrade_shows_notice_and_keep_is_not_changeable`(CHG-03), `test_member_cannot_change`, `test_only_admin_of_same_customer_can_cancel`(CHG-04), `test_cancel_before_deadline_then_new_request_allowed`, `test_cancel_after_deadline_is_refused`, `test_applied_request_cannot_be_cancelled`(CHG-05), `test_submit_records_request_history_audit_and_message`, `test_double_click_creates_one_request`, `test_simultaneous_insert_is_blocked_by_index`, `test_open_request_blocks_a_different_change`(CHG-06), `test_expired_notification_needs_reconfirm`, `test_stale_analysis_cannot_be_used`(CHG-07) | 완료 (T11). 사내 채널 실제 전송은 T5(NTF), 화면은 T13 |
 | DOC-01~07 서류 | `test_review_amounts_match_hand_calculation`, `test_confirmation_needs_change_and_has_no_expiry`(DOC-01), `test_xlsx_values_match`, `test_docx_values_match`, `test_pdf_values_match`(DOC-02, 03), `test_document_number_and_validity`(DOC-04), `test_issue_records_document_and_audit_without_name`(DOC-05), `test_same_input_same_hash`(DOC-06), `test_other_customer_is_denied`, `test_issue_does_not_write_files`(DOC-07), `test_schedule_mismatch_blocks_document` | 완료 (T10) |
 | VIZ-01~04 그래프·해설 | `test_chart_pngs_open`, `test_chart_palette_order_is_fixed`, `test_korean_pdf_font_is_registered`. 해설(VIZ-04): `test_captions_for_user_002_match_hand_calculation`, `test_captions_overage_and_keep`, `test_captions_explain_stability_and_short_history`, `test_caption_numbers_come_from_document`, `test_captions_in_pdf_and_docx`, `test_captions_module_uses_no_ai`. 화면 표시와 그래프 아래 표(VIZ-02)는 T13 | 일부 (T10) |
-| ASK-01~06 AI 상담 | — | T12 |
+| ASK-05 질문 가림 | `test_mask_question_hides_each_format`(형식 10가지), `test_mask_keeps_ordinary_words` | 가림 함수 있음 (T5a). 상담 흐름 연결은 T12 |
+| ASK-01~04, 06 AI 상담 | — | T12 |
 | ESC-01~04 상담 연결 | — | T12 |
 
 작업 번호(T1 등)는 [tasks.md](tasks.md)를 따릅니다.

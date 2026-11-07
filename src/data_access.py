@@ -88,3 +88,13 @@ def load_identity(conn: sqlite3.Connection, user_id: str) -> dict:
     if row is None:
         raise CustomerNotFound(user_id)
     return {"name": row[0], "code": row[1]}
+
+
+def customer_names(conn: sqlite3.Connection) -> list[str]:
+    """DB에 있는 모든 고객 이름. 외부 전송 전 검사와 질문 가림에만 쓴다(SEC-08, ASK-05)."""
+    return [row[0] for row in conn.execute("SELECT name FROM users ORDER BY user_id")]
+
+
+def customer_codes(conn: sqlite3.Connection) -> list[str]:
+    """모든 가칭 코드. 외부 전송 전 검사에만 쓴다(SEC-08 규칙 2)."""
+    return [row[0] for row in conn.execute("SELECT code FROM customer_codes ORDER BY user_id")]

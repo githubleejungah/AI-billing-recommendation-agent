@@ -355,13 +355,14 @@ ai-billing-recommendation-agent/
 │   ├── data_quality.py       # 데이터 품질 게이트(DQ, T9)
 │   ├── metrics.py            # 운영 지표(OPS-02, T13)
 │   ├── simulator.py          # 금액 계산 · 추천 안정성 · 월별 일정 · (v2.1) 성수기 판정과 계절 반영 예측
-│   ├── mcp_server.py         # 정해진 읽기 도구 (완료, 검색 도구 추가 예정)
-│   ├── report.py             # 검증 · Slack JSON (완료, 자리표시자·인용 검증으로 바꿀 예정)
+│   ├── mcp_server.py         # 정해진 읽기 도구 (완료)
+│   ├── report.py             # 자리표시자 · 인용 검증 · Slack JSON (T4 완료)
 │   ├── history.py            # 앱 저장소(app.db) 5개 표 생성 · 기록 · 기간 지난 기록 정리
 │   ├── audit.py              # 감사 기록(JSONL). 이름·본문·비밀값 키는 거부 (T10)
 │   ├── fonts.py              # 한글 글꼴 찾기(PDF·그래프 공용, KOREAN_FONT_PATH로 지정) (T10)
 │   ├── knowledge.py          # BM25 검색, 대상 여부 표시
-│   ├── guard.py              # 상황 카드 · 별칭 · 전송 전 검사 · 감사 기록
+│   ├── policy.py             # 전송 정책 파일 읽기 · 값 검사 · 해시와 정책 변경 기록(SEC-14, T5a 완료)
+│   ├── guard.py              # 상황 카드 · 별칭 · 질문 가림 · 전송 전 검사 · 허용 모델 · 전송 감사 기록 (T5a 완료)
 │   ├── agent.py              # 단계 실행 · 별칭 · Claude 호출 · 실행 기록 · 명령줄
 │   ├── batch.py              # 월간 선별 · 알림 미리보기 · 사내 요약 (v2.0)
 │   ├── change.py             # 셀프 변경: 재계산 · 확인 · 권한자 · 취소 · 모의 적용 (T11 완료)
