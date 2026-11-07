@@ -1,0 +1,255 @@
+{
+  "about": "검색 평가 세트(EVAL-02). 지식 문서를 쓰기 전에 먼저 작성했다(EVAL-05). 질문은 영업 담당자나 에이전트가 실제로 찾을 법한 말로 썼고, 문서 표현을 따라 쓰지 않았다.",
+  "written_at": "2026-11-07",
+  "how_to_score": "scored=true인 질문은 정답 조각이 검색 상위 3개 안에 있으면 맞힌 것으로 본다. scored=false인 질문은 관련 문서가 없어야 하는 질문으로, 빈 결과가 나와야 맞힌 것이다(KNW-04).",
+  "answer_chunks_note": "target_docs는 질문을 쓸 때 정한 의도다. answer_chunks는 문서를 쓴 뒤, 검색을 한 번도 돌리기 전에 문서를 읽고 지정했다(2026-11-07, T2). 정답 조각은 모두 target_docs 안에서만 골랐다. 정답 조각 중 하나라도 상위 3개에 있으면 맞힌 것으로 본다.",
+  "questions": [
+    {
+      "id": "Q01",
+      "scored": true,
+      "question": "프로로 올리면서 할인 받으려면 어떤 조건을 갖춰야 해?",
+      "target_docs": [
+        "promo_pro_upgrade"
+      ],
+      "answer_chunks": [
+        "promo_pro_upgrade#2"
+      ]
+    },
+    {
+      "id": "Q02",
+      "scored": true,
+      "question": "전환 할인 기간이 끝나고 나면 요금이 어떻게 돼?",
+      "target_docs": [
+        "promo_pro_upgrade",
+        "promo_ent_upgrade"
+      ],
+      "answer_chunks": [
+        "promo_pro_upgrade#3",
+        "promo_ent_upgrade#3"
+      ]
+    },
+    {
+      "id": "Q03",
+      "scored": true,
+      "question": "엔터프라이즈로 바꾸면 프로랑 뭐가 다른가요",
+      "target_docs": [
+        "plan_enterprise"
+      ],
+      "answer_chunks": [
+        "plan_enterprise#3"
+      ]
+    },
+    {
+      "id": "Q04",
+      "scored": true,
+      "question": "엔터프라이즈 전환 할인은 누가 받을 수 있나",
+      "target_docs": [
+        "promo_ent_upgrade"
+      ],
+      "answer_chunks": [
+        "promo_ent_upgrade#2"
+      ]
+    },
+    {
+      "id": "Q05",
+      "scored": true,
+      "question": "베이직을 오래 쓴 고객한테 주는 혜택 있어?",
+      "target_docs": [
+        "promo_basic_loyal"
+      ],
+      "answer_chunks": [
+        "promo_basic_loyal#1",
+        "promo_basic_loyal#2"
+      ]
+    },
+    {
+      "id": "Q06",
+      "scored": true,
+      "question": "여름에 하던 프로 할인 지금도 신청 가능한가요?",
+      "target_docs": [
+        "promo_pro_summer"
+      ],
+      "answer_chunks": [
+        "promo_pro_summer#2"
+      ]
+    },
+    {
+      "id": "Q07",
+      "scored": true,
+      "question": "요금제 변경하면 언제부터 바뀐 요금이 적용돼?",
+      "target_docs": [
+        "policy_plan_change"
+      ],
+      "answer_chunks": [
+        "policy_plan_change#1"
+      ]
+    },
+    {
+      "id": "Q08",
+      "scored": true,
+      "question": "낮은 요금제로 내릴 때 고객이 조심해야 할 게 뭐야",
+      "target_docs": [
+        "policy_plan_change",
+        "guide_downgrade"
+      ],
+      "answer_chunks": [
+        "policy_plan_change#3",
+        "guide_downgrade#2"
+      ]
+    },
+    {
+      "id": "Q09",
+      "scored": true,
+      "question": "기본 제공량을 넘겨서 쓰면 요금이 어떤 식으로 붙나요",
+      "target_docs": [
+        "plan_basic",
+        "plan_pro",
+        "plan_enterprise"
+      ],
+      "answer_chunks": [
+        "plan_basic#2",
+        "plan_pro#2",
+        "plan_enterprise#2"
+      ]
+    },
+    {
+      "id": "Q10",
+      "scored": true,
+      "question": "요금제 올리자고 하면 부담스러워하는 고객은 어떻게 설득하지",
+      "target_docs": [
+        "guide_upgrade"
+      ],
+      "answer_chunks": [
+        "guide_upgrade#2"
+      ]
+    },
+    {
+      "id": "Q11",
+      "scored": true,
+      "question": "더 싼 요금제로 바꾸라고 안내할 때 처음에 뭐라고 말해야 해?",
+      "target_docs": [
+        "guide_downgrade"
+      ],
+      "answer_chunks": [
+        "guide_downgrade#1"
+      ]
+    },
+    {
+      "id": "Q12",
+      "scored": true,
+      "question": "지금 요금제 그대로 쓰는 게 낫다는 걸 어떻게 전하면 좋을까",
+      "target_docs": [
+        "guide_keep"
+      ],
+      "answer_chunks": [
+        "guide_keep#1"
+      ]
+    },
+    {
+      "id": "Q13",
+      "scored": true,
+      "question": "최근에 접속이 확 줄어든 고객한테는 어떻게 연락하나",
+      "target_docs": [
+        "guide_churn_risk"
+      ],
+      "answer_chunks": [
+        "guide_churn_risk#2"
+      ]
+    },
+    {
+      "id": "Q14",
+      "scored": true,
+      "question": "이용 내역이 하나도 없는 고객에게는 뭘 안내해?",
+      "target_docs": [
+        "guide_no_usage"
+      ],
+      "answer_chunks": [
+        "guide_no_usage#1"
+      ]
+    },
+    {
+      "id": "Q15",
+      "scored": true,
+      "question": "가입한 지 얼마 안 돼서 할인 못 받는 고객에게 어떻게 설명하지",
+      "target_docs": [
+        "guide_upgrade",
+        "promo_pro_upgrade"
+      ],
+      "answer_chunks": [
+        "guide_upgrade#3",
+        "promo_pro_upgrade#4"
+      ]
+    },
+    {
+      "id": "Q16",
+      "scored": true,
+      "question": "사용량이 조금만 늘어도 추천 결과가 달라지는 고객은 어떻게 안내해야 해",
+      "target_docs": [
+        "guide_keep"
+      ],
+      "answer_chunks": [
+        "guide_keep#3"
+      ]
+    },
+    {
+      "id": "Q17",
+      "scored": true,
+      "question": "가입한 지 한두 달 된 고객 추천 결과를 믿어도 되나",
+      "target_docs": [
+        "guide_no_usage"
+      ],
+      "answer_chunks": [
+        "guide_no_usage#2"
+      ]
+    },
+    {
+      "id": "Q18",
+      "scored": true,
+      "question": "베이직은 어떤 회사한테 맞는 요금제야?",
+      "target_docs": [
+        "plan_basic"
+      ],
+      "answer_chunks": [
+        "plan_basic#1"
+      ]
+    },
+    {
+      "id": "Q19",
+      "scored": true,
+      "question": "프로 쓰면 기술 지원은 어디까지 받을 수 있어",
+      "target_docs": [
+        "plan_pro"
+      ],
+      "answer_chunks": [
+        "plan_pro#3"
+      ]
+    },
+    {
+      "id": "Q20",
+      "scored": true,
+      "question": "저장 공간을 많이 쓰는 고객한테 맞는 요금제는?",
+      "target_docs": [
+        "plan_pro",
+        "plan_enterprise"
+      ],
+      "answer_chunks": [
+        "plan_enterprise#1",
+        "plan_pro#1"
+      ]
+    },
+    {
+      "id": "N01",
+      "scored": false,
+      "question": "사내 식당 이번 주 메뉴 알려줘",
+      "target_docs": [],
+      "answer_chunks": []
+    },
+    {
+      "id": "N02",
+      "scored": false,
+      "question": "노트북 비밀번호를 잊어버렸을 때 어떻게 해",
+      "target_docs": [],
+      "answer_chunks": []
+    }
+  ]
+}

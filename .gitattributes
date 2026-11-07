@@ -1,0 +1,7 @@
+# 줄 끝을 LF로 통일한다(Windows와 CI에서 같은 내용이 되게).
+* text=auto eol=lf
+*.png binary
+*.pdf binary
+*.xlsx binary
+*.docx binary
+*.db binary

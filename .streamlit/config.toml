@@ -1,0 +1,9 @@
+# 테스트 화면은 이 PC에서만 열린다(UI-01). 기본값에 맡기지 않고 적어 둔다.
+[server]
+address = "127.0.0.1"
+port = 8501
+headless = true
+
+# Streamlit의 사용 통계 전송을 끈다. 외부로 나가는 데이터를 최소화한다(security.md 1장).
+[browser]
+gatherUsageStats = false

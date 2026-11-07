@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "billing-tools": {
+      "command": "${CLAUDE_PROJECT_DIR:-.}/.venv/Scripts/python.exe",
+      "args": ["${CLAUDE_PROJECT_DIR:-.}/src/mcp_server.py"]
+    }
+  }
+}

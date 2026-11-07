@@ -1,0 +1,31 @@
+# 자동 테스트(OPS-01). push와 pull request마다 전체 테스트를 돌린다.
+# 테스트에는 저장소 비밀값 검사(SEC-09)와 하네스 훅 검사(HAR)가 포함된다.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: 한글 글꼴 설치(서류 PDF·그래프 테스트용)
+        run: sudo apt-get update && sudo apt-get install -y fonts-wqy-zenhei fonts-noto-cjk
+
+      - name: 의존성 설치
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: 테스트
+        run: python -m pytest -q

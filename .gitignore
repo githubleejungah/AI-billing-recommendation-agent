@@ -1,0 +1,22 @@
+# API 키와 Webhook URL
+.env
+.env.*
+!.env.example
+
+# init_db.py로 언제든 다시 만들 수 있다.
+database/billing_mock.db
+
+# 앱이 만드는 파일. 고객 정보가 들어 있어 저장소에 넣지 않는다(SEC-10, 11, 15).
+output/
+logs/
+data/
+
+# 과정 가이드와 처음 작업본. 참고용이라 저장소에 올리지 않는다.
+reference/
+
+.venv/
+__pycache__/
+.pytest_cache/
+
+# Claude Code의 개인 설정(서버 승인 등)
+.claude/settings.local.json

@@ -1,0 +1,18 @@
+# 실행에 필요한 패키지. 버전은 .venv에 설치된 것과 같게 고정한다.
+anthropic==2.6.0
+mcp==2.3.0
+python-dotenv==1.2.4
+
+# 비용처리 서류와 그래프(T10). PC에 설치한 뒤 `pip show`로 확인한 버전으로 고정한다.
+openpyxl>=3.1
+python-docx>=1.1
+reportlab>=4.0
+matplotlib>=3.8
+
+# 테스트에서 PDF를 다시 읽어 숫자를 확인한다(T10).
+pypdf>=4.0
+pytest>=8.0
+
+# 고객·담당자 화면(T13). 아직 설치 전이라 하한만 둔다.
+# PC에 설치한 뒤 `pip show streamlit`으로 확인한 버전으로 고정한다.
+streamlit>=1.40
