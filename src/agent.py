@@ -52,7 +52,7 @@ SENT_LOG_PATH = ROOT / "logs" / "sent_log.json"
 
 MAX_SEARCHES = 5
 SEARCH_TOP_K = 3
-MAX_TOKENS = 2000
+MAX_TOKENS = 4000
 TIMEOUT_SECONDS = 60
 RETRY_DELAYS = (1, 2)  # 다시 시도 간격(초). 여기에 0~0.5초 지터를 더한다.
 JITTER_SECONDS = 0.5

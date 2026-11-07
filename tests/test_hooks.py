@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -20,8 +21,9 @@ PROJECT = "C:/Users/User/실습산출물/ai-billing-recommendation-agent"  # Win
 
 def guard(tool: str, **tool_input) -> tuple[int, str]:
     event = {"tool_name": tool, "tool_input": tool_input, "cwd": PROJECT}
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}  # Windows 기본(cp949) 출력이면 한글 안내문을 읽지 못한다
     done = subprocess.run([sys.executable, str(HOOKS / "guard_files.py")], input=json.dumps(event, ensure_ascii=False),
-                          capture_output=True, text=True, encoding="utf-8")
+                          capture_output=True, text=True, encoding="utf-8", env=env)
     return done.returncode, done.stderr
 
 
