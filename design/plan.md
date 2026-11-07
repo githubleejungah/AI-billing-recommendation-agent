@@ -363,7 +363,7 @@ ai-billing-recommendation-agent/
 │   ├── knowledge.py          # BM25 검색, 대상 여부 표시
 │   ├── policy.py             # 전송 정책 파일 읽기 · 값 검사 · 해시와 정책 변경 기록(SEC-14, T5a 완료)
 │   ├── guard.py              # 상황 카드 · 별칭 · 질문 가림 · 전송 전 검사 · 허용 모델 · 전송 감사 기록 (T5a 완료)
-│   ├── agent.py              # 단계 실행 · 별칭 · Claude 호출 · 실행 기록 · 명령줄
+│   ├── agent.py              # 6단계 지휘 · Claude 호출(시간 제한·재시도) · 다시 쓰기 · 실행 기록 · Slack · --purge (T5 완료)
 │   ├── batch.py              # 월간 선별 · 알림 미리보기 · 사내 요약 (v2.0)
 │   ├── change.py             # 셀프 변경: 재계산 · 확인 · 권한자 · 취소 · 모의 적용 (T11 완료)
 │   ├── documents.py          # 서류 데이터 → PDF · DOCX · XLSX (v2.0)

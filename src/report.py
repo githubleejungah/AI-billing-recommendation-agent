@@ -174,6 +174,19 @@ def _is_ineligible(item: dict) -> bool:
     return bool(promos) and all(p.get("status") == "대상 아님" for p in promos)
 
 
+def required_keys(sim: dict, registry: dict) -> list[str]:
+    """이 고객의 리포트에 반드시 들어가야 하는 자리표시자(REP-01). 작성 지시(agent)와 검증이 같은 목록을 쓴다."""
+    if sim["status"] != "ok":
+        return []
+    rec = sim["recommendation"]
+    keys = []
+    for name, spec in registry["keys"].items():
+        when = spec.get("required_when", "never")
+        if when == "always" or (when == "promotion" and rec["promo_id"]) or (when == "saving" and rec["saving_12m"] > 0):
+            keys.append(name)
+    return keys
+
+
 def check_draft(draft: str, sim: dict, retrieved: dict[str, dict], registry: dict | None = None) -> list[str]:
     """초안의 문제 목록. 빈 목록이면 통과. retrieved는 이번 분석에서 검색된 조각(ID → 검색 결과 항목)."""
     registry = registry or load_registry()
@@ -202,12 +215,8 @@ def check_draft(draft: str, sim: dict, retrieved: dict[str, dict], registry: dic
             problems.append("이용 기록이 없다는 안내가 없음")
         return problems
 
-    rec = sim["recommendation"]
-    for name, spec in registry["keys"].items():
-        when = spec.get("required_when", "never")
-        needed = when == "always" or (when == "promotion" and rec["promo_id"]) or \
-            (when == "saving" and rec["saving_12m"] > 0)
-        if needed and name not in used:
+    for name in required_keys(sim, registry):
+        if name not in used:
             problems.append(f"필수 자리표시자 없음: {{{name}}}")
     for group in registry["required_any"]:
         if not any(name in used for name in group):

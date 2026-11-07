@@ -481,27 +481,27 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | REP-03 기록 없음 | `test_no_usage_gives_no_recommendation`, `test_no_usage_report` | 있음 |
 | REP-04, 05 인용 검증 | `test_citation_must_be_retrieved`, `test_ineligible_promotion_cannot_back_recommendation`, `test_each_section_needs_a_citation` | 완료 (T4) |
 | SIM-04 추천 안정성 | `test_stable_recommendation`, `test_changes_when_usage_rises`, `test_changes_when_usage_falls` | 있음 (T3) |
-| SEC-01 키는 환경 변수로만 | — | T5 |
+| SEC-01 키는 환경 변수로만 | `test_cli_refuses_without_api_key`, `test_run_log_has_no_secrets_or_names`, `test_no_secrets_in_repository` | 있음 (T5) |
 | SEC-02 가상 데이터 | (검토로 확인. 데이터는 `init_db.py`가 만든다) | 해당 없음 |
-| SEC-03 이름 미전송 | `test_customer_tool_hides_name`(도구 쪽) / API 요청 쪽은 없음 | 일부, T5 |
-| SEC-04 기록에 비밀값 없음 | — | T5 |
-| SEC-05 고객 별칭 | `test_aliases_are_per_run` | 있음 (T5a). 도구 실행 직전 ID 복원은 T5 |
-| SEC-06 인젝션 대비 | — | T5 (지시문 문구와 구분 표시를 테스트로 확인) |
+| SEC-03 이름 미전송 | `test_customer_tool_hides_name`(도구 쪽), `test_requests_carry_no_identity_and_follow_the_rules`(API 요청 전부), `test_happy_path_produces_report_slack_history_and_log`(이름은 검증 뒤 리포트 파일에만) | 있음 (T5) |
+| SEC-04 기록에 비밀값 없음 | `test_run_log_has_no_secrets_or_names`, `test_same_report_is_sent_once`(보낸 기록에 주소 없음) | 있음 (T5) |
+| SEC-05 고객 별칭 | `test_aliases_are_per_run`, `test_requests_carry_no_identity_and_follow_the_rules` | 있음 (T5a, T5). 검색 도구는 코드가 이 실행의 고객 기준으로 실행하므로 Claude는 ID를 보지도 넘기지도 않음 |
+| SEC-06 인젝션 대비 | `test_requests_carry_no_identity_and_follow_the_rules`(지시문 문구, 문서 조각 구분 표시) | 있음 (T5) |
 | SEC-07 상황 카드 | `test_card_for_user_002_matches_security_example`, `test_card_for_seasonal_and_keep_customers`, `test_cards_never_carry_identity_or_customer_numbers`(203명 전원), `test_local_only_values_stay_on_pc`, `test_card_refuses_unknown_values` | 있음 (T5a) |
 | SEC-08 전송 전 검사 | `test_each_rule_blocks`(규칙 1~4), `test_unmasked_question_is_blocked_and_masked_passes`(규칙 5), `test_clean_request_passes`, `test_knowledge_documents_pass_the_screen` | 있음 (T5a) |
 | SEC-09 저장소 비밀값 검사 | `test_secret_detector_catches_fake_values`, `test_no_secrets_in_repository`, `test_gitignore_excludes_secrets_and_customer_outputs`, `test_env_example_has_no_values_for_secrets` | 있음 (T0) |
-| SEC-10 보관과 삭제 | — | T5 |
+| SEC-10 보관과 삭제 | `test_purge_removes_expired_files_and_history`, `test_gitignore_excludes_secrets_and_customer_outputs` | 있음 (T5) |
 | SEC-11 감사 기록 | `test_preflight_blocks_and_audits_without_content`, `test_preflight_pass_and_record_sent`, `test_policy_records_hash_and_change` | 외부 전송·정책 변경 있음 (T5a). 분석 요청·검증 결과·Slack 전송·삭제는 T5 |
 | SEC-12 Slack 가칭 코드 | `test_customer_codes_are_unique_random_and_fixed`, `test_customer_tool_does_not_expose_codes`(코드 표), `test_slack_message_uses_code_not_name`(Slack 메시지), `test_submit_records_request_history_audit_and_message`(셀프 변경 사내 메시지) | 완료 (T3, T4, T11) |
 | SEC-13 허용 모델 | `test_check_model`, `test_preflight_blocks_model_outside_list` | 있음 (T5a) |
 | SEC-14 전송 정책 파일 | `test_policy_loads_with_hash_and_sections`, `test_policy_refuses_to_run_without_approval`, `test_policy_rejects_bad_values`, `test_policy_records_hash_and_change`, `test_policy_matches_simulator_constant` | 있음 (T5a) |
-| SEC-15 추천 이력 | — | T5 |
+| SEC-15 추천 이력 | `test_happy_path_produces_report_slack_history_and_log`, `test_no_usage_customer_gets_notice_without_search`, `test_purge_removes_expired_files_and_history`(거래 종료 후 1년) | 있음 (T5). 개별 기록 대신 남길 통계는 T13(OPS-02) |
 | SEC-16 실명 조회 | — | T13 |
 | KNW-01, 02, 04, 06 문서 검색 | `test_chunks_follow_section_headings`, `test_korean_is_indexed_as_two_letter_pieces`, `test_same_query_same_order`, `test_ties_are_broken_by_chunk_id`, `test_top_k_limits`, `test_unrelated_query_returns_nothing`, `test_tool_result_has_no_scores_or_numbers`, `test_short_tenure_customer_is_marked_not_eligible`, `test_eligible_customer_is_marked`, `test_ended_promotion_is_marked`, `test_upgrade_only_promotion_for_current_plan`, `test_no_usage_customer_status_is_unknown` | 있음 (T2) |
 | KNW-03, 05 문서 내용 | `test_amount_and_rate_patterns_catch_examples`, `test_knowledge_has_no_amounts_or_rates`, `test_metadata_ids_exist_in_database`, `test_every_plan_and_promotion_has_a_document` | 있음 (T1) |
-| AGT-01~06 에이전트 루프 | — | T5 |
-| NTF-01~03 알림 | `test_slack_message_shape`(메시지 형식만) | 일부, T5 |
-| NTF-04 중복 전송 방지 | — | T5 |
+| AGT-01~06 에이전트 루프 | `test_happy_path_produces_report_slack_history_and_log`(6단계 기록·모델 ID), `test_search_limit_stops_the_run`(AGT-01), `test_rewrite_once_after_validation_failure`, `test_second_failure_rejects_without_publishing`, `test_unretrieved_citation_is_rejected`(AGT-05), `test_guard_block_means_nothing_is_sent`, `test_model_outside_list_does_nothing` | 있음 (T5, 가짜 Claude). 실제 API는 T6 |
+| NTF-01~03 알림 | `test_slack_message_shape`, `test_send_requires_flag_and_webhook`, `test_rejected_report_is_never_sent` | 있음 (T5) |
+| NTF-04 중복 전송 방지 | `test_same_report_is_sent_once` | 있음 (T5) |
 | EVAL-01~05 평가 | `test_retrieval_set_targets_existing_documents`(평가 세트 형식). EVAL-05의 질문 먼저 쓰기는 T1에서 완료(질문 파일을 문서보다 먼저 PC에 저장) | 평가 실행은 T7 |
 | UI-01 로컬 전용 | `test_streamlit_binds_localhost_only`(설정 파일) | 일부 (T0). 실제 접속 확인은 T13 |
 | UI-02~09 화면 | — | T8(목업), T13(구현) |
@@ -517,7 +517,7 @@ v3.3(과정 자료 대조)에서 추가한 결정입니다. 2026-11-07에 사용
 | OPS-01 CI | `.github/workflows/ci.yml` | 완료 (T0b). 첫 실행 통과(2026-11-07, 커밋 5bb0109) |
 | RET-04, SIM-09 데이터 접근·기준일 | `test_only_data_access_queries_billing_tables`, `test_simulator_names_point_to_data_access`, `test_load_usage_respects_range`, `test_identity_and_unknown_customer`(RET-04), `test_default_as_of`, `test_as_of_from_environment`, `test_explicit_as_of_wins_over_environment`, `test_invalid_as_of_is_rejected`(SIM-09) | 완료 (T3c) |
 | DQ-01~04 데이터 품질 | — | T9 |
-| AGT-03 API 견고성 | — | T5 |
+| AGT-03 API 견고성 | `test_retryable_errors_are_retried_with_backoff`, `test_retries_stop_after_two`, `test_auth_error_is_not_retried`, `test_truncated_answer_is_not_published`, `test_classify_error` | 있음 (T5) |
 | KNW-08 하이브리드 검색 | — | T7 |
 | OPS-02~04 운영 지표·개선 순환 | — | T13, T7 |
 | DEP-01~06 배포 | — | T16 |

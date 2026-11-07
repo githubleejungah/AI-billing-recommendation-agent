@@ -50,6 +50,7 @@ PHONE = re.compile(r"(?<!\d)(?:\+82[-\s]?)?0\d{1,2}[-\s.]?\d{3,4}[-\s.]?\d{4}(?!
 EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 ACCOUNT = re.compile(r"(?<!\d)\d{2,6}(?:-\d{2,8}){2,3}(?!\d)")  # 계좌번호(하이픈으로 나뉜 숫자 묶음)
 DIGITS = re.compile(r"\d+(?:[.,]\d+)*")
+CHUNK_ID = re.compile(r"(?<![A-Za-z0-9_])[a-z][a-z0-9_]*#\d+(?!\d)")  # 지식 조각 ID(plan_pro#2). 상품 정보라 숫자 검사에서 뺀다.
 MASK = "[가림]"
 MASK_NUMBER = "[숫자]"
 CORE_NAME_MIN = 3  # "(주)" 없이 쓴 이름은 3글자 이상만 찾는다. "로", "카파"는 보통 낱말과 겹친다.
@@ -351,7 +352,7 @@ class Screen:
         if USER_ID.search(everything) or CODE.search(everything) or any(c in everything for c in self.codes):
             hits.add(2)
         for text in checked:
-            stripped = report.ALIAS.sub(" ", report.PLACEHOLDER.sub(" ", text))
+            stripped = report.ALIAS.sub(" ", report.PLACEHOLDER.sub(" ", CHUNK_ID.sub(" ", text)))
             if numbers_in(stripped) - self.numbers:
                 hits.add(3)
             if any(p.search(text) for p in (RRN, BIZ, PHONE, EMAIL)):
