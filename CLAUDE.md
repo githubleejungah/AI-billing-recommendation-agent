@@ -25,7 +25,7 @@
 
 ## 보호 파일 (훅이 막음, 사람이 직접 고침)
 
-`.env`(읽기 포함), `.mcp.json`, `.claude/settings.json`, `.claude/hooks/`, `logs/`, `data/`, `database/billing_mock.db`, `reference/`
+`.env`(읽기 포함), `.mcp.json`, `.claude/settings.json`, `.claude/hooks/`, `logs/`, `data/`, `database/billing_mock.db`, `reference/`, `config/data_policy.toml`(보안 책임자가 승인하는 정책 파일. 고칠 때는 `[approval]`도 새로 적음)
 
 ## 명령 (Windows PowerShell, 프로젝트 폴더에서)
 

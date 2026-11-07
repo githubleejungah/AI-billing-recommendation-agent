@@ -36,6 +36,8 @@ def guard(tool: str, **tool_input) -> tuple[int, str]:
     ("Edit", {"file_path": f"{PROJECT}/data/app.db"}),
     ("Write", {"file_path": f"{PROJECT}/database/billing_mock.db"}),
     ("Write", {"file_path": f"{PROJECT}/reference/original/notes.md"}),
+    ("Edit", {"file_path": f"{PROJECT}/config/data_policy.toml"}),
+    ("Bash", {"command": "sed -i s/false/true/ config/data_policy.toml"}),
     ("Bash", {"command": "cat .env"}),
     ("Bash", {"command": "Get-Content .env.production"}),
     ("Bash", {"command": "rm .claude/settings.json"}),
@@ -51,6 +53,8 @@ def test_protected_paths_are_blocked(tool, args):
 @pytest.mark.parametrize("tool, args", [
     ("Read", {"file_path": f"{PROJECT}/.env.example"}),
     ("Read", {"file_path": f"{PROJECT}/.mcp.json"}),  # 읽기는 허용
+    ("Read", {"file_path": f"{PROJECT}/config/data_policy.toml"}),  # 정책 파일도 읽기는 허용
+    ("Edit", {"file_path": f"{PROJECT}/config/placeholders.toml"}),  # 자리표시자 등록 파일은 개발 파일
     ("Read", {"file_path": f"{PROJECT}/.claude/settings.json"}),
     ("Edit", {"file_path": f"{PROJECT}/src/simulator.py"}),
     ("Write", {"file_path": f"{PROJECT}/design/requirements.md"}),
@@ -94,5 +98,6 @@ def test_settings_register_both_hooks():
 
 def test_claude_md_lists_protected_files():
     text = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    for name in (".env", ".mcp.json", ".claude/settings.json", ".claude/hooks/", "logs/", "data/"):
+    for name in (".env", ".mcp.json", ".claude/settings.json", ".claude/hooks/", "logs/", "data/",
+                 "config/data_policy.toml"):
         assert name in text
