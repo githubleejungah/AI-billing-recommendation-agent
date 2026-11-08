@@ -1,8 +1,12 @@
 # 과금 추천 에이전트 (AI Billing Recommendation Agent)
 
+[![시연 영상](https://img.youtube.com/vi/JW4FIV1JBnw/maxresdefault.jpg)](https://youtu.be/JW4FIV1JBnw)
+
+▶ [시연 영상 보기 (YouTube)](https://youtu.be/JW4FIV1JBnw) — Azure에 배포한 화면으로 시연 시나리오 1~10을 보여줍니다. 순서와 설명은 [시연 안내서](docs/demo_guide.md)에 있습니다.
+
 고객의 이용·청구 데이터를 매달 분석해 **더 맞는 요금제를 고객이 묻기 전에 먼저 알리고**, 고객이 상담 없이 직접 바꾸거나 AI 상담·담당자 연결을 할 수 있게 하는 B2B SaaS용 제품입니다. 바꾸기 전에는 사내 결재에 쓸 비용 절감 검토서를, 바꾼 뒤에는 변경 확인서를 내려받습니다.
 
-> AI Native 클라우드 앱 개발 과정의 프로젝트이자 포트폴리오입니다. **데이터는 모두 가상**이며, 실제 고객 정보는 쓰지 않습니다. 지금은 구현 단계이며, 기능별 진행 상황은 아래 "주요 기능" 표의 상태 칸에 있습니다.
+> AI Native 클라우드 앱 개발 과정의 프로젝트이자 포트폴리오입니다. **데이터는 모두 가상**이며, 실제 고객 정보는 쓰지 않습니다. 구현과 Azure 시연 배포까지 마쳤습니다(2026-11-08). 기능별 상태는 아래 "주요 기능" 표에 있습니다.
 
 ## 핵심 원칙
 
@@ -22,10 +26,11 @@
 | 근거 문서 검색 | 지식 문서(가상) 키워드 검색, 고객이 받을 수 없는 이벤트 표시 | 완료(하이브리드 검색은 예정) |
 | 리포트 검증 | AI는 숫자 대신 자리표시자만 쓰고 값은 검증 뒤 코드가 채움, 검색한 근거만 인용 | 완료 |
 | 외부 AI 전송 보안 | 고객 정보는 범주만 담은 상황 카드로, 질문 속 개인정보 가림, 보내기 직전 검사(이름·ID·허용 밖 숫자·연락처), 승인된 정책 파일 | 완료 |
-| 리포트 작성 실행(AI 호출) | 6단계 실행, 근거 검색 최대 5회, 시간 제한·재시도, 검증 실패 시 1회 다시 쓰기, 실행 기록, Slack(같은 리포트는 한 번만) | 완료(가짜 Claude로 시험, 실제 API 확인은 다음 단계) |
-| 월간 선제 알림 | 데이터 품질 점검 후 대상 선별, 성수기 사전 알림 | 예정 |
-| AI 상담·담당자 연결 | 위험한 질문은 AI가 답하지 않고 담당자에게 연결(접수 DB + Slack) | 예정 |
-| 화면 | 고객 화면, 담당자 화면(운영 지표 포함) | 예정 |
+| 리포트 작성 실행(AI 호출) | 6단계 실행, 근거 검색 최대 5회, 시간 제한·재시도, 검증 실패 시 1회 다시 쓰기, 실행 기록, Slack(같은 리포트는 한 번만) | 완료(실제 API 확인) |
+| 월간 선제 알림 | 데이터 품질 점검 후 대상 선별, 성수기 사전 알림 | 완료 |
+| AI 상담·담당자 연결 | 위험한 질문은 AI가 답하지 않고 담당자에게 연결(접수 DB + Slack) | 완료 |
+| 화면 | 고객 화면, 담당자 화면(운영 지표, 근거 원문 모달, 실명 조회 감사 기록) | 완료 |
+| Azure 시연 배포 | App Service, Key Vault(관리 ID), Entra ID 로그인, App Insights, 예산 알림. Bicep + azd로 올리고 촬영 뒤 삭제([배포 안내](docs/deploy_guide.md)) | 완료(2026-11-08 올림·내림) |
 
 ## 구조
 
@@ -38,7 +43,7 @@
 
 ## 기술 스택
 
-Python 3.13 · SQLite(가상 데이터) · Claude API · MCP(자체 읽기 전용 도구 서버) · reportlab·python-docx·openpyxl·matplotlib(서류·그래프) · Streamlit(화면, 예정) · GitHub Actions(CI) · Azure(시연 때만 배포, 예정)
+Python 3.13 · SQLite(가상 데이터) · Claude API · MCP(자체 읽기 전용 도구 서버) · reportlab·python-docx·openpyxl·matplotlib(서류·그래프) · Streamlit(화면) · GitHub Actions(CI) · Azure(시연 때만 배포, Bicep + azd)
 
 ## 실행
 
@@ -53,6 +58,8 @@ python src/agent.py user_002      # 리포트 작성(.env에 ANTHROPIC_API_KEY �
 python src/agent.py --purge       # 보관 기간이 지난 리포트·기록 지우기
 python src/batch.py               # 월간 선별: 데이터 품질 점검 → 알림 미리보기·사내 요약(output/selection/)
 python src/batch.py --announce-loyalty  # 장기 이용 혜택 시작 공지 미리보기(한 번만)
+streamlit run src/app_customer.py                       # 고객 화면(127.0.0.1:8501)
+streamlit run src/app_staff.py --server.port 8502       # 담당자 화면
 ```
 
 ## 실제 회사에 도입할 때: 지식 문서와 평가 질문
