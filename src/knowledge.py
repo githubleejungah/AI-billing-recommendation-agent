@@ -99,8 +99,28 @@ def split_chunks(document: Document, body: str) -> list[Chunk]:
     return chunks
 
 
+SYNONYMS_PATH = Path(__file__).resolve().parent.parent / "config" / "synonyms.toml"
+SYNONYMS_ADOPTED = False  # 평가(eval/run_eval.py)로 채택이 정해지면 True. 상담·리포트 검색이 사전을 쓴다.
+
+
+def load_synonyms(path: Path = SYNONYMS_PATH) -> list[tuple[str, str]]:
+    """업무 용어 사전(T7): (고객이 쓰는 말, 문서가 쓰는 말). 긴 말부터 바꾸도록 정렬한다."""
+    import tomllib
+
+    terms = tomllib.loads(path.read_text(encoding="utf-8"))["terms"]
+    return sorted(terms.items(), key=lambda pair: (-len(pair[0]), pair[0]))
+
+
+def normalize_query(query: str, synonyms: list[tuple[str, str]]) -> str:
+    """검색어의 말을 문서의 말로 바꾼다. 문서는 바꾸지 않는다."""
+    for variant, canonical in synonyms:
+        query = query.replace(variant, canonical)
+    return query
+
+
 class KnowledgeBase:
-    def __init__(self, directory: Path = KNOWLEDGE_DIR):
+    def __init__(self, directory: Path = KNOWLEDGE_DIR, synonyms: list[tuple[str, str]] | None = None):
+        self.synonyms = synonyms or []
         self.chunks: list[Chunk] = []
         for path in sorted(directory.glob("*.md")):
             document, body = parse_document(path)
@@ -132,7 +152,7 @@ class KnowledgeBase:
             raise ValueError(f"audience는 {'/'.join(AUDIENCES)} 중 하나여야 합니다")
         if not 1 <= top_k <= MAX_TOP_K:
             raise ValueError(f"top_k는 1~{MAX_TOP_K}이어야 합니다")
-        query_terms = sorted(set(tokenize(query)))
+        query_terms = sorted(set(tokenize(normalize_query(query, self.synonyms))))
         if not query_terms:
             return []
         hits = []

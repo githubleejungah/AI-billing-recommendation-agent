@@ -1,0 +1,26 @@
+{
+  "about": "시나리오 고객 20명의 정답 추천(EVAL-01). database/init_db.py의 시나리오 의도(메모)에서 정했고, 금액은 tests/test_simulator.py에서 손으로 계산했다. 기준일 2026-11-01, 장기 이용 혜택 반영(T3d).",
+  "covers": "하향 이득(006, 007), 상향 이득(002, 008, 009, 011, 013, 020), 유지 이득(001, 003, 012, 015~019), 이벤트 조건 경계(004, 005), 유지 + 이벤트(014), 기록 없음(010)",
+  "answers": {
+    "user_001": {"action": "keep", "plan_id": "PLAN_BASIC", "promo_id": null},
+    "user_002": {"action": "upgrade", "plan_id": "PLAN_PRO", "promo_id": "PROMO_PRO_UPGRADE"},
+    "user_003": {"action": "keep", "plan_id": "PLAN_PRO", "promo_id": null},
+    "user_004": {"action": "keep", "plan_id": "PLAN_BASIC", "promo_id": null},
+    "user_005": {"action": "upgrade", "plan_id": "PLAN_PRO", "promo_id": "PROMO_PRO_UPGRADE"},
+    "user_006": {"action": "downgrade", "plan_id": "PLAN_BASIC", "promo_id": null},
+    "user_007": {"action": "downgrade", "plan_id": "PLAN_PRO", "promo_id": null},
+    "user_008": {"action": "upgrade", "plan_id": "PLAN_ENTERPRISE", "promo_id": "PROMO_ENT_UPGRADE"},
+    "user_009": {"action": "upgrade", "plan_id": "PLAN_ENTERPRISE", "promo_id": null},
+    "user_010": {"action": "no_usage", "plan_id": null, "promo_id": null},
+    "user_011": {"action": "upgrade", "plan_id": "PLAN_PRO", "promo_id": "PROMO_PRO_UPGRADE"},
+    "user_012": {"action": "keep", "plan_id": "PLAN_PRO", "promo_id": null},
+    "user_013": {"action": "upgrade", "plan_id": "PLAN_PRO", "promo_id": null},
+    "user_014": {"action": "keep_with_promotion", "plan_id": "PLAN_BASIC", "promo_id": "PROMO_BASIC_LOYAL"},
+    "user_015": {"action": "keep", "plan_id": "PLAN_ENTERPRISE", "promo_id": null},
+    "user_016": {"action": "keep", "plan_id": "PLAN_PRO", "promo_id": null},
+    "user_017": {"action": "keep", "plan_id": "PLAN_BASIC", "promo_id": null},
+    "user_018": {"action": "keep", "plan_id": "PLAN_BASIC", "promo_id": null},
+    "user_019": {"action": "keep", "plan_id": "PLAN_BASIC", "promo_id": null},
+    "user_020": {"action": "upgrade", "plan_id": "PLAN_ENTERPRISE", "promo_id": "PROMO_ENT_UPGRADE"}
+  }
+}

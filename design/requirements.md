@@ -582,8 +582,8 @@ v3.6에서 추가한 결정입니다. 2026-11-08 G3 검토 중 사용자 제안,
 | RET-04, SIM-09 데이터 접근·기준일 | `test_only_data_access_queries_billing_tables`, `test_simulator_names_point_to_data_access`, `test_load_usage_respects_range`, `test_identity_and_unknown_customer`(RET-04), `test_default_as_of`, `test_as_of_from_environment`, `test_explicit_as_of_wins_over_environment`, `test_invalid_as_of_is_rejected`(SIM-09) | 완료 (T3c) |
 | DQ-01~04 데이터 품질 | `test_clean_data_passes_and_seasonal_spikes_are_only_flagged`, `test_each_rule_is_detected`(DQ-01, 02), `test_excluded_customers_are_left_out_of_selection`(DQ-02), `test_low_pass_rate_stops_the_whole_selection`(DQ-03, 04) | 완료 (T9) |
 | AGT-03 API 견고성 | `test_retryable_errors_are_retried_with_backoff`, `test_retries_stop_after_two`, `test_auth_error_is_not_retried`, `test_truncated_answer_is_not_published`, `test_classify_error` | 있음 (T5) |
-| KNW-08 하이브리드 검색 | — | T7 |
-| OPS-02~04 운영 지표·개선 순환 | — | T13, T7 |
+| KNW-08 하이브리드 검색 | (11-08) 같은 채택 절차로 업무 용어 사전을 먼저 시험: `test_search_numbers_and_synonym_decision`(채택 안 함) | 하이브리드는 T7 남은 일(모델 내려받기 필요) |
+| OPS-02~04 운영 지표·개선 순환 | (OPS-04) `eval/baseline.json`, `test_current_results_meet_the_baseline`, `test_check_reports_a_drop`. (EVAL-01) `test_scenario_answers_match_simulator`, (EVAL-06) `test_customer_questions_are_routed` | OPS-04 완료 (T7 일부). OPS-02는 T13, OPS-03은 운영 |
 | DEP-01~06 배포 | — | T16 |
 | REP-03, 05 (v3.5) 첫 사용 안내·인용 | `test_no_usage_report`, `test_no_usage_report_needs_onboarding_citation`, `test_no_usage_customer_searches_guide`(`test_no_usage_customer_gets_notice_without_search`를 바꿈), `test_no_usage_notice_without_citation_is_rewritten_then_rejected` | 완료 (T5b) |
 | REP-06 (v3.5) 이탈 위험 고객 혜택 안내 | `test_churn_risk_report_has_loyalty_placeholders`(필수 여부·응대 안내 구역·최고 단계), `test_churn_risk_below_top_tier_needs_remaining_months`, `test_loyalty_values_for_each_customer` | 완료 (T3d) |

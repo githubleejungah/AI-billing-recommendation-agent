@@ -10,6 +10,8 @@ database/billing_mock.db
 output/
 logs/
 data/
+# 평가 실행 결과(실제 API 평가에는 리포트가 들어감). 요약은 design/tasks.md에 옮겨 적는다.
+eval/results/
 
 # 과정 가이드와 처음 작업본. 참고용이라 저장소에 올리지 않는다.
 reference/

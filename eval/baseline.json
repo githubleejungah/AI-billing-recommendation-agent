@@ -1,0 +1,11 @@
+{
+  "about": "평가 기준(OPS-04). CI의 run_eval.py --check가 이 값보다 떨어지면 실패한다. 값이 오르면 사람이 검토하고 이 파일을 갱신한다.",
+  "recorded_at": "2026-11-08",
+  "search_setting": "BM25, 업무 용어 사전 미채택",
+  "search": {
+    "tuning": {"top3": 16, "empty_ok": 2},
+    "holdout": {"top3": 7, "empty_ok": 1}
+  },
+  "scenario": {"correct": 20},
+  "customer": {"ai_answered_must_escalate": 0}
+}
