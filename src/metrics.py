@@ -49,7 +49,8 @@ def cost_usd(model: str | None, input_tokens: int, output_tokens: int) -> float 
 def compute(app: sqlite3.Connection, audit_entries: list[dict], run_logs: list[dict], month: str) -> dict:
     """한 달(YYYY-MM)의 운영 지표."""
     like = f"{month}%"
-    notices = _count(app, "SELECT COUNT(*) FROM notifications WHERE created_at LIKE ?", like)
+    # 고객 알림만 센다. 담당자 연락(status '사내')은 같은 표에 있지만 알림이 아니다.
+    notices = _count(app, "SELECT COUNT(*) FROM notifications WHERE created_at LIKE ? AND status != '사내'", like)
     accepted = _count(app, "SELECT COUNT(*) FROM recommendation_history WHERE outcome IN (?, ?) AND outcome_at LIKE ?",
                       *ACCEPTED, like)
     changes = _count(app, "SELECT COUNT(*) FROM change_requests WHERE requested_at LIKE ?", like)

@@ -31,19 +31,18 @@ def review_data(db: str, user_id: str) -> tuple[dict, dict]:
     return data, charts.render_all(data)
 
 
-def notices_section(cfg, code: str) -> None:
+def notices_section(conn, cfg, code: str) -> None:
     notices = ui_logic.customer_notices(cfg.app_db, code)
     if not notices:
         st.caption("새 알림이 없습니다.")
+    names = ui_logic.product_names(conn)
     for n in notices[:3]:
-        promo = f" + {n['promo_id']}" if n["promo_id"] else ""
-        saving = f" · 12개월 절감 {n['saving_12m']:,}원(부가세 별도)" if n["saving_12m"] else ""
-        st.info(f"{n['created_at'][:10]} 알림 · 추천 {n['plan_id']}{promo}{saving} · {n['valid_until']}까지 유효")
+        st.info(ui_logic.notice_line(n, names))
 
 
 def recommendation_tab(conn, cfg, user_id: str, actions: set[str]) -> None:
     code = data_access.load_identity(conn, user_id)["code"]
-    notices_section(cfg, code)
+    notices_section(conn, cfg, code)
     try:
         data, pngs = review_data(str(cfg.billing_db), user_id)
     except documents.DocumentError as error:
@@ -89,7 +88,8 @@ def change_tab(conn, cfg, user_id: str, role: str, actions: set[str]) -> None:
         st.success(done)
     request = ui_logic.open_change(cfg.app_db, code)
     if request:
-        st.write(f"접수 번호 **{request['request_id']}** · {request['from_plan']} → {request['to_plan']} · "
+        names = ui_logic.product_names(conn)
+        st.write(f"접수 번호 **{request['request_id']}** · {names[request['from_plan']]} → {names[request['to_plan']]} · "
                  f"적용일 {request['effective_date']} · 취소 기한 {request['cancel_deadline']}")
         if st.button("변경 확인서 만들기", key="issue_confirmation"):
             st.session_state[f"confirmation:{user_id}"] = documents.issue(

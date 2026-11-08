@@ -53,6 +53,7 @@ def selection_tab(conn, cfg) -> None:
 
 
 def tickets_tab(cfg) -> None:
+    st.button("새로 고침", key="refresh_tickets")  # 탭을 바꿔도 화면이 다시 읽히지 않아, 새 접수를 보려면 누른다
     queue = ui_logic.tickets_for(cfg.app_db)
     if not queue:
         st.caption("접수가 없습니다.")
@@ -175,10 +176,14 @@ def metrics_tab(cfg) -> None:
     cols[0].metric("리포트 첫 시도 실패율", pct(m["first_try_fail_rate"]))
     cols[1].metric("데이터 품질 통과율", pct(m["quality_pass_rate"]))
     cols[2].metric("리포트 평균 시간", "—" if m["report_seconds_avg"] is None else f"{m['report_seconds_avg']:.1f}초")
-    cols[3].metric("API 토큰(입력/출력)", f"{m['input_tokens']:,}/{m['output_tokens']:,}")
-    cost = "—" if m["cost_usd"] is None else f"${m['cost_usd']:.2f}"
-    st.caption(f"예상 비용 {cost}(가정 단가) · "
-               "상담 연결 이유별: " + (", ".join(f"{k} {pct(v)}" for k, v in m["escalation_by_reason"].items()) or "—"))
+    hours = m["ticket_answer_hours_avg"]
+    cols[3].metric("상담 답변 평균 시간", "—" if hours is None else f"{hours:.1f}시간")
+    cols = st.columns(4)
+    cols[0].metric("API 호출", m["api_calls"])
+    cols[1].metric("입력 토큰", f"{m['input_tokens']:,}")
+    cols[2].metric("출력 토큰", f"{m['output_tokens']:,}")
+    cols[3].metric("예상 비용(가정 단가)", "—" if m["cost_usd"] is None else f"${m['cost_usd']:.2f}")
+    st.caption("상담 연결 이유별: " + (", ".join(f"{k} {pct(v)}" for k, v in m["escalation_by_reason"].items()) or "—"))
 
 
 def main() -> None:

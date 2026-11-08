@@ -43,7 +43,9 @@ class EvidenceError(Exception):
 class Config:
     """화면이 쓰는 경로와 날짜. 테스트는 임시 폴더로 바꾼다(실제 data/app.db로 선별을 돌리지 않게)."""
     billing_db: Path = data_access.DB_PATH
-    app_db: Path = history.APP_DB_PATH
+    # BILLING_APP_DB: 시연·연습용 앱 저장소를 따로 쓸 때(선별의 90일 재알림 기록이 섞이지 않게)
+    app_db: Path = field(default_factory=lambda: Path(os.environ.get("BILLING_APP_DB", "").strip()
+                                                      or history.APP_DB_PATH))
     audit_path: Path = audit.AUDIT_PATH
     output_dir: Path = ROOT / "output"
     today: Callable[[], date] = date.today
@@ -145,10 +147,28 @@ def record_reaction(app_db: Path, code: str, outcome: str, today: date,
 # --- 조회 ---
 
 def customer_notices(app_db: Path, code: str) -> list[dict]:
-    """고객 화면 알림 목록(최근 것 먼저)."""
+    """고객 화면 알림 목록(최근 것 먼저). 담당자 연락(status '사내')은 고객에게 보이지 않는다."""
     with closing(history.connect(app_db)) as app:
-        rows = app.execute("SELECT * FROM notifications WHERE code = ? ORDER BY created_at DESC", (code,)).fetchall()
+        rows = app.execute("SELECT * FROM notifications WHERE code = ? AND status != '사내' ORDER BY created_at DESC",
+                           (code,)).fetchall()
     return [dict(r) for r in rows]
+
+
+def product_names(conn: sqlite3.Connection) -> dict[str, str]:
+    """요금제·이벤트 ID → 고객이 읽는 이름. 화면에 ID를 그대로 보이지 않게 한다."""
+    names = {p.plan_id: p.plan_name for p in data_access.load_plans(conn)}
+    names.update({p.promo_id: p.promo_name for p in data_access.load_promotions(conn)})
+    return names
+
+
+def notice_line(notice: dict, names: dict[str, str]) -> str:
+    """알림 한 줄(정해진 틀에 값만 채움). 금액은 선별 때 시뮬레이터가 계산한 값이다."""
+    if notice["plan_id"]:
+        what = "추천 " + " + ".join(names.get(i, i) for i in (notice["plan_id"], notice["promo_id"]) if i)
+    else:
+        what = (notice["parts"] or notice["kind"] or "안내").replace(",", " + ")
+    saving = f" · 12개월 절감 {notice['saving_12m']:,}원(부가세 별도)" if notice["saving_12m"] else ""
+    return f"{notice['created_at'][:10]} 알림 · {what}{saving} · {notice['valid_until']}까지 유효"
 
 
 def open_change(app_db: Path, code: str) -> dict | None:

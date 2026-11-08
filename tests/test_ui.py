@@ -124,6 +124,25 @@ def test_reaction_updates_latest_recommendation_and_audit(cfg):
         ui_logic.record_reaction(cfg.app_db, "AAA-AAA", "수락", TODAY, cfg.audit_path)
 
 
+def test_notice_line_uses_product_names_and_hides_staff_rows(conn, cfg):
+    with closing(history.connect(cfg.app_db)) as app:
+        app.executemany("INSERT INTO notifications (notification_id, code, created_at, valid_until, plan_id, promo_id,"
+                        " saving_12m, status, kind, parts) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        [("n1", CODE_002, "2026-11-08T00:00:00", "2026-12-01", "PLAN_PRO", "PROMO_PRO_UPGRADE",
+                          598000, "미리보기", "절감 추천", "절감 추천"),
+                         ("s1", CODE_002, "2026-11-08T00:00:00", "2026-11-08", None, None, None, "사내", "담당자",
+                          "이탈 위험")])
+        app.commit()
+    notices = ui_logic.customer_notices(cfg.app_db, CODE_002)
+    assert [n["notification_id"] for n in notices] == ["n1"]
+    line = ui_logic.notice_line(notices[0], ui_logic.product_names(conn))
+    assert line == ("2026-11-08 알림 · 추천 프로 + 프로 전환 3개월 30% 할인 · 12개월 절감 598,000원(부가세 별도)"
+                    " · 2026-12-01까지 유효")
+    tier = ui_logic.notice_line({**notices[0], "plan_id": None, "promo_id": None, "saving_12m": None,
+                                 "parts": "단계 도달"}, {})
+    assert "단계 도달" in tier and "None" not in tier
+
+
 def test_number_written_into_draft_is_rejected(conn):
     sim = simulator.simulate(conn, "user_002")
     ok = "## 추천\n{rec_plan} 요금제를 권합니다. [근거: promo_pro_upgrade#1]"
@@ -139,6 +158,8 @@ def test_monthly_metrics_hand_calculated(tmp_path):
                         " VALUES (?, 'X', ?, '2026-12-01', '보냄')",
                         [("n1", "2026-11-01"), ("n2", "2026-11-01"), ("n3", "2026-11-02"), ("n4", "2026-11-03"),
                          ("n0", "2026-10-01")])
+        app.execute("INSERT INTO notifications (notification_id, code, created_at, valid_until, status)"
+                    " VALUES ('s1', 'Z', '2026-11-01', '2026-11-01', '사내')")  # 담당자 연락은 알림이 아님
         app.executemany("INSERT INTO recommendation_history (run_id, code, analyzed_at, outcome, outcome_at)"
                         " VALUES (?, 'X', '2026-11-01', ?, ?)",
                         [("a", "셀프 수락", "2026-11-07"), ("b", "수락", "2026-11-08"), ("c", "거절", "2026-11-08")])
