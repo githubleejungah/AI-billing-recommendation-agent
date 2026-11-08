@@ -72,6 +72,7 @@ class Reply:
     ticket: dict | None = None
     detail: str | None = None
     disclosure: str = DISCLOSURE
+    retrieved: dict[str, dict] = field(default_factory=dict)  # 근거 모달용 조각 원문(UI-10). 화면 세션에만 보관
 
 
 def classify(question: str, pol: policy_module.Policy) -> tuple[str, str | None]:
@@ -190,7 +191,7 @@ def _condition(app, conn, code, question, masked, sim, *, client, model, policy,
     retrieved = {}
     for chunk, _score in found:
         retrieved[chunk.chunk_id] = {"chunk_id": chunk.chunk_id, "title": chunk.document.title,
-                                     "section": chunk.section, "text": chunk.text,
+                                     "section": chunk.section, "text": chunk.text, "audience": chunk.document.audience,
                                      **mcp_server.chunk_eligibility(chunk, status)}
     available = [k for k, v in report.values(sim, registry).items() if v is not None]
     content = "\n".join([
@@ -225,7 +226,8 @@ def _condition(app, conn, code, question, masked, sim, *, client, model, policy,
         filled = _fill(text, sim, registry)
     except report.ReportRejected:
         return _escalate(app, code, masked, "검증 실패", now, CONDITION, "채운 뒤 숫자 불일치", kw)
-    return Reply(CONDITION, answer=filled, citations=list(dict.fromkeys(report.CITATION.findall(text))))
+    return Reply(CONDITION, answer=filled, citations=list(dict.fromkeys(report.CITATION.findall(text))),
+                 retrieved=retrieved)
 
 
 def request_human(conn: sqlite3.Connection, user_id: str, question: str, *, policy: policy_module.Policy,

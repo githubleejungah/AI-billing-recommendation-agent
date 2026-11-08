@@ -215,6 +215,9 @@ class RunResult:
     run_log_path: Path
     sent: bool = False
     problems: list[str] = field(default_factory=list)
+    # 화면 세션에 보관할 값(UI-06, UI-10). 파일로 저장하지 않는다.
+    retrieved: dict[str, dict] = field(default_factory=dict)  # 이 실행에서 검색 도구가 돌려준 조각 원문
+    draft: str | None = None  # 자리표시자 상태의 초안(UI-06 숫자 써 넣기 시연)
 
 
 # --- 도움 함수 ---
@@ -401,7 +404,8 @@ def run(user_id: str, *, client: ClaudeClient, model: str, conn: sqlite3.Connect
                     found = []
                     for chunk, _score in kb.search(query, SEARCH_TOP_K):
                         item = {"chunk_id": chunk.chunk_id, "title": chunk.document.title, "section": chunk.section,
-                                "text": chunk.text, **mcp_server.chunk_eligibility(chunk, status)}
+                                "text": chunk.text, "audience": chunk.document.audience,
+                                **mcp_server.chunk_eligibility(chunk, status)}
                         retrieved[chunk.chunk_id] = item
                         found.append(_chunk_text(item))
                     results.append({"type": "tool_result", "tool_use_id": call["id"],
@@ -468,7 +472,8 @@ def run(user_id: str, *, client: ClaudeClient, model: str, conn: sqlite3.Connect
         log.step("전달", "검증 통과", f"리포트·Slack JSON 저장, 추천 이력 기록, Slack {delivery}")
         log.status = "완료"
         _save_json(run_log_path, log.to_dict())
-        return RunResult(run_id, "완료", report_path, slack_path, run_log_path, sent=delivery == "보냄")
+        return RunResult(run_id, "완료", report_path, slack_path, run_log_path, sent=delivery == "보냄",
+                         retrieved=retrieved, draft=draft)
     except guard.GuardBlocked:
         return fail("guard_blocked")
     except guard.GuardError:

@@ -13,6 +13,5 @@ matplotlib>=3.8
 pypdf>=4.0
 pytest>=8.0
 
-# 고객·담당자 화면(T13). 아직 설치 전이라 하한만 둔다.
-# PC에 설치한 뒤 `pip show streamlit`으로 확인한 버전으로 고정한다.
-streamlit>=1.40
+# 고객·담당자 화면(T13). .venv에 설치된 버전으로 고정했다(11-08).
+streamlit==1.67.0
