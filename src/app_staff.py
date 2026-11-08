@@ -103,6 +103,13 @@ def customer_tab(conn, cfg) -> None:
             react_col.success(f"{code}: {outcome} 기록")
 
 
+EXAMPLE_NUMBER = "이 고객은 1년에 700,000원을 아낍니다.\n"  # UI-06 시연용. 검증이 거부해야 하는 문장
+
+
+def insert_number(key: str) -> None:
+    st.session_state[key] = EXAMPLE_NUMBER + st.session_state.get(key, "")
+
+
 def report_view(conn, cfg, code: str, user_id: str, saved: dict) -> None:
     result: agent.RunResult = saved["result"]
     log = json.loads(result.run_log_path.read_text(encoding="utf-8"))
@@ -125,7 +132,12 @@ def report_view(conn, cfg, code: str, user_id: str, saved: dict) -> None:
         st.info(agent.send_slack(message, digest, run_id=result.run_id, code=code, webhook_url=webhook,
                                  audit_path=cfg.audit_path))
     with st.expander("숫자 직접 써 넣기(시연, 저장·전송 안 함)"):  # UI-06
-        edited = st.text_area("초안(자리표시자)", result.draft or "", key=f"draft:{code}", height=240)
+        key = f"draft:{code}"
+        st.session_state.setdefault(key, result.draft or "")
+        st.caption("AI 초안에는 숫자 대신 {saving_12m} 같은 빈칸만 있습니다. 아래 칸에 숫자를 직접 써 넣거나 "
+                   "'예시 숫자 넣기'를 누른 뒤 '다시 검증'을 누르세요.")
+        st.button("예시 숫자 넣기", key=f"insert:{code}", on_click=insert_number, args=(key,))
+        edited = st.text_area("초안(자리표시자)", key=key, height=240)
         if st.button("다시 검증", key=f"recheck:{code}"):
             problems = ui_logic.recheck_draft(edited, saved["sim"], result.retrieved)
             if problems:

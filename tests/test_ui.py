@@ -298,6 +298,11 @@ def test_analyze_only_on_button_and_session_keeps_result(cfg):
     assert any(b.key.startswith(f"rep:{CODE_002}:") for b in at.button)  # 리포트 인용 → 근거 버튼
     at.text_input(key="metrics_month").input("2026-10").run()
     at.button(key=f"recheck:{CODE_002}").click().run()
+    assert any("통과" in s.value for s in at.success)  # 고치지 않은 초안은 통과
+    at.button(key=f"insert:{CODE_002}").click().run()  # UI-06: 예시 숫자 넣기 → 다시 검증 → 거부
+    assert at.text_area(key=f"draft:{CODE_002}").value.startswith("이 고객은 1년에 700,000원")
+    at.button(key=f"recheck:{CODE_002}").click().run()
+    assert any("거부" in e.value and "700,000" in e.value for e in at.error)
     assert len(client.requests) == calls  # 다른 조작으로는 다시 부르지 않는다(UI-07)
     sent = [e for e in audit.read(cfg.audit_path) if e["event"] == "external_send"]
     assert sent and all(e["result"] == "통과" for e in sent)
