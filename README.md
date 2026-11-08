@@ -101,3 +101,7 @@ design/      명세·계획·작업·보안 정책
 .claude/     개발 하네스(보호 파일 훅, 테스트 훅)
 .github/     CI
 ```
+
+## 연락처
+
+이메일: [veryfar@naver.com](mailto:veryfar@naver.com)
