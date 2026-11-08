@@ -145,6 +145,25 @@ def test_happy_path_produces_report_slack_history_and_log(conn, pol, paths):
     assert all(call["attempts"] == 1 for call in log["calls"])
 
 
+def test_particles_follow_the_name_and_code(conn, pol, paths):
+    # T5b 실제 실행에서 "(주)카파은"이 나왔다. Claude는 별칭을 "씨원"으로 읽어 "C1은", "C1이"로 쓴다.
+    # user_002 이름 "(주)베타소프트"(트, 받침 없음), 가칭 코드 "UQM-9GU"(U "유", 받침 없음)
+    extra = " C1은 사용량이 늘고 있고, C1이 원하면 상담을 잡습니다. C1과의 통화 기록을 남깁니다."
+    client = FakeClient([search("프로 전환 이벤트", "toolu_01A"), search("상향 응대 가이드", "toolu_01B"),
+                         lambda request: good_draft(request, extra)])
+    result = run(conn, pol, paths, client)
+    assert result.status == "완료"
+
+    report_text = result.report_path.read_text(encoding="utf-8")
+    assert "(주)베타소프트는 사용량이" in report_text
+    assert "(주)베타소프트가 원하면" in report_text
+    assert "(주)베타소프트와의 통화" in report_text
+    assert not re.search(r"베타소프트(은|이|과)(?![가-힣])", report_text)
+
+    slack = json.dumps(json.loads(result.slack_path.read_text(encoding="utf-8")), ensure_ascii=False)
+    assert "고객 UQM-9GU는 사용량이" in slack and "고객 UQM-9GU가 원하면" in slack
+
+
 def test_requests_carry_no_identity_and_follow_the_rules(conn, pol, paths):
     client = FakeClient(happy_script())
     run(conn, pol, paths, client)

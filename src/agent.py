@@ -40,6 +40,7 @@ import audit
 import data_access
 import guard
 import history
+import josa
 import knowledge
 import mcp_server
 import policy as policy_module
@@ -434,8 +435,9 @@ def run(user_id: str, *, client: ClaudeClient, model: str, conn: sqlite3.Connect
 
         # 6. 전달: 이름은 사내 리포트 파일에만, Slack은 가칭 코드만
         code = identity["code"]
-        to_name = report.ALIAS.sub(lambda m: identity["name"] if m.group() == alias else m.group(), filled)
-        to_code = report.ALIAS.sub(lambda m: f"고객 {code}" if m.group() == alias else m.group(), filled)
+        # 별칭 뒤 조사는 바꿀 말의 받침에 맞춘다("C1은" → "(주)카파는")
+        to_name = josa.replace_alias(filled, alias, identity["name"])
+        to_code = josa.replace_alias(filled, alias, f"고객 {code}")
         report_text = f"# 요금제 추천 리포트: {identity['name']} ({code})\n\n" \
                       f"분석 기준일 {sim['as_of']} · 모델 {model} · 실행 {run_id}\n\n{to_name}\n"
         report_path = output_dir / "reports" / f"{run_id}_{code}.md"
