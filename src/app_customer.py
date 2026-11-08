@@ -158,7 +158,8 @@ def chat_tab(conn, cfg, user_id: str) -> None:
         reply = item["reply"]
         st.markdown(f"**질문** {item['question']}")
         if reply.answer:
-            w.cited_text(reply.answer, reply.retrieved, ui_logic.SCREEN_CUSTOMER, f"chat{len(log) - i}")
+            w.cited_text(reply.answer, reply.retrieved, ui_logic.SCREEN_CUSTOMER, f"chat{len(log) - i}",
+                         ui_logic.product_names(conn))
         if reply.ticket:
             st.warning(f"담당자에게 연결했습니다. 접수 번호 {reply.ticket['ticket_id']}, "
                        f"답변 예정 {reply.ticket['eta']}.")

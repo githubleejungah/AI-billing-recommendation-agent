@@ -114,7 +114,8 @@ def report_view(conn, cfg, code: str, user_id: str, saved: dict) -> None:
         for problem in result.problems:
             st.write(f"- {problem}")
         return
-    w.cited_text(result.report_path.read_text(encoding="utf-8"), result.retrieved, ui_logic.SCREEN_STAFF, f"rep:{code}")
+    w.cited_text(result.report_path.read_text(encoding="utf-8"), result.retrieved, ui_logic.SCREEN_STAFF, f"rep:{code}",
+                 ui_logic.product_names(conn))
     message = json.loads(result.slack_path.read_text(encoding="utf-8"))
     with st.expander("Slack 메시지 미리보기"):
         st.text(message.get("text", ""))

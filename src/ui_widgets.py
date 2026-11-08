@@ -45,7 +45,7 @@ def money_table(rows: list[dict]) -> None:
 
 
 @st.dialog("근거 문서")
-def evidence_dialog(chunk_id: str, retrieved: dict, screen: str) -> None:
+def evidence_dialog(chunk_id: str, retrieved: dict, screen: str, names: dict | None = None) -> None:
     """UI-10. 실행 때 받은 조각 원문만 보여준다(다시 검색하지 않음)."""
     try:
         item = ui_logic.evidence(chunk_id, retrieved, screen)
@@ -56,18 +56,22 @@ def evidence_dialog(chunk_id: str, retrieved: dict, screen: str) -> None:
     st.caption(f"{item['chunk_id']} · 대상: {item['audience']}")
     st.write(item["text"])
     for promo in item["not_eligible"]:
-        st.warning(f"{promo['promo_id']}: 대상 아님 ({promo.get('reason', '')})")
+        name = (names or {}).get(promo["promo_id"], promo["promo_id"])
+        st.warning(f"{name}: 대상 아님 ({promo.get('reason', '')})")
 
 
-def cited_text(text: str, retrieved: dict, screen: str, key: str) -> None:
+BUTTONS_PER_ROW = 3  # 근거가 많아도 버튼 글자가 잘리지 않게 줄을 나눈다
+
+
+def cited_text(text: str, retrieved: dict, screen: str, key: str, names: dict | None = None) -> None:
     """인용이 있는 본문. 인용마다 근거 버튼을 단다."""
     st.markdown(text)
     ids = ui_logic.cited_ids(text)
-    if ids:
-        cols = st.columns(len(ids))
-        for col, chunk_id in zip(cols, ids):
+    for start in range(0, len(ids), BUTTONS_PER_ROW):
+        row = ids[start:start + BUTTONS_PER_ROW]
+        for col, chunk_id in zip(st.columns(BUTTONS_PER_ROW), row):
             if col.button(f"근거 {chunk_id}", key=f"{key}:{chunk_id}"):
-                evidence_dialog(chunk_id, retrieved, screen)
+                evidence_dialog(chunk_id, retrieved, screen, names)
 
 
 def downloads(issued: dict, key: str) -> None:
