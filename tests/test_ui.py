@@ -231,6 +231,8 @@ def keys(at: AppTest) -> set[str]:
 def test_member_sees_request_message_instead_of_change_button(cfg):
     at = app("app_customer.py", cfg)
     assert not at.exception
+    # 기간의 물결표가 취소선(~~)으로 바뀌지 않게 이스케이프한다(11-08 시연 영상에서 발견)
+    assert any("2026-12\\~2027-02" in str(m.value) for m in at.markdown)
     assert "prepare_change" in keys(at) and "human" in keys(at)
     assert "598,000원" in str([t.value for t in at.table])  # 12개월 절감 공급가액(손 계산)
     at.radio(key="role").set_value(ui_logic.ROLE_MEMBER).run()

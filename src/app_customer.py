@@ -55,10 +55,10 @@ def recommendation_tab(conn, cfg, user_id: str, actions: set[str]) -> None:
         st.image(pngs[key], caption=title)
         with st.expander("그래프 해설"):
             for line in data["captions"][key]:
-                st.write(line)
+                st.markdown(w.md(line))
     with st.expander("계산 기준"):
         for line in data["basis"]:
-            st.write(line)
+            st.markdown(w.md(line))
     if "documents" in actions and st.button("비용 절감 검토서 만들기", key="issue_review"):
         st.session_state[f"review:{user_id}"] = documents.issue(
             conn, user_id, user_id, "review", issued=cfg.today(), app_db=cfg.app_db, audit_path=cfg.audit_path)

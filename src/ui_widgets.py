@@ -38,6 +38,11 @@ def model(pol: policy_module.Policy) -> str:
     return os.environ.get("CLAUDE_MODEL", "").strip() or pol.allowed_models[0]
 
 
+def md(text: str) -> str:
+    """기간 표시의 물결표(2026-12~2027-02)가 마크다운 취소선으로 바뀌지 않게 한다."""
+    return text.replace("~", "\\~")
+
+
 def money_table(rows: list[dict]) -> None:
     """공급가액·세액·합계를 나눠 보여준다(부가세 구분)."""
     st.table([{"구분": r["label"], "공급가액": documents.won(r["supply"]), "세액": documents.won(r["tax"]),
@@ -65,7 +70,7 @@ BUTTONS_PER_ROW = 3  # 근거가 많아도 버튼 글자가 잘리지 않게 줄
 
 def cited_text(text: str, retrieved: dict, screen: str, key: str, names: dict | None = None) -> None:
     """인용이 있는 본문. 인용마다 근거 버튼을 단다."""
-    st.markdown(text)
+    st.markdown(md(text))
     ids = ui_logic.cited_ids(text)
     for start in range(0, len(ids), BUTTONS_PER_ROW):
         row = ids[start:start + BUTTONS_PER_ROW]
