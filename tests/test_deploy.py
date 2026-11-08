@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
@@ -58,8 +59,18 @@ def test_auth_script_uses_same_app_name_as_bicep():
     assert "credential" not in script  # 클라이언트 시크릿을 만들지 않는다
 
 
-def test_main_entry_shows_customer_page_first(tmp_path, monkeypatch):
-    monkeypatch.setenv("BILLING_APP_DB", str(tmp_path / "app.db"))
-    at = AppTest.from_file(str(ROOT / "src" / "app_main.py"), default_timeout=120).run()
+def test_main_entry_shows_customer_page_first(tmp_path):
+    # 가상 DB는 저장소에 없다(.gitignore). CI에서도 돌도록 임시 폴더에 새로 만든다.
+    sys.path.insert(0, str(ROOT / "src"))
+    sys.path.insert(0, str(ROOT / "database"))
+    import init_db
+    import ui_logic
+
+    db = tmp_path / "billing_mock.db"
+    init_db.build(db)
+    at = AppTest.from_file(str(ROOT / "src" / "app_main.py"), default_timeout=120)
+    at.session_state["cfg"] = ui_logic.Config(billing_db=db, app_db=tmp_path / "app.db",
+                                              audit_path=tmp_path / "audit.jsonl", output_dir=tmp_path / "output")
+    at.run()
     assert not at.exception
     assert any("요금제 알림" in t.value for t in at.title)
