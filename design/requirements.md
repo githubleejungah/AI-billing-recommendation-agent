@@ -136,6 +136,10 @@ Slack 등 사내 공유에 쓰는 고정 가칭 코드입니다. 실무에서는
 | `change_requests` | request_id, code, requested_at, requested_by_role, from_plan, to_plan, promo_id, effective_date, cancel_deadline, status(접수·취소·적용), recalculated_saving_12m, (T11) quote_sha256, cancelled_at, applied_at. 고객마다 접수 상태는 하나만(부분 유일 색인) | 셀프 변경(CHG). 시연에서는 이 표가 모의 청구 시스템 역할 |
 | `tickets` | ticket_id, code, created_at, question_masked, reason(위험 주제·근거 없음·검증 실패·고객 요청), status, answer, answered_at, faq_candidate | 상담 연결(ESC). 질문은 개인정보를 가린 형태로 저장 |
 | `documents` | document_no, kind(검토서·확인서), code, issued_at, valid_until, sha256, formats | 서류 발행 기록(DOC-05) |
+| `opt_outs` (T9) | code, opted_out_at | 알림 수신거부(PRO-09 마감 전 알림 제외 등). 시연용 최소 표 |
+| `quality_checks` (T9) | run_id, checked_at, total, passed, pass_rate, counts, excluded_codes, flagged_codes, stopped | 데이터 품질 점검 결과(DQ-04). 가칭 코드만 |
+
+(T9) `notifications`에는 kind(절감 추천·성수기 예고·예산 안내·혜택 공지·단계 도달·담당자 연락), parts(합친 알림의 구성), peak_months, stage(1차·마감 전), send_on, tier(단계 도달 알림의 단계), run_id 열을 더한다.
 
 ### knowledge/ — 지식 문서 (v2 추가, RAG 검색 대상)
 
@@ -306,6 +310,16 @@ DB가 아니라 마크다운 파일입니다. 리포트의 **문장 근거**(왜
 - **PRO-09** (v3.2) 같은 성수기 묶음에는 1차 알림과 마감 전 알림 두 번만 보낸다. 고객이 변경을 신청했거나 수신을 거부했으면 마감 전 알림은 보내지 않는다. 같은 달에 절감 추천(PRO-01) 대상이기도 하면 성수기 알림 하나로 합친다. 예산 안내도 법무 확인 전까지는 PRO-04 규칙(수신 동의, 야간 발송 금지)을 똑같이 따른다.
 - **PRO-10** (v3.5) 장기 이용 혜택을 시작할 때 **한 번** 전체 고객에게 혜택 공지를 보낸다. 공지에는 고객의 현재 단계, 다음 단계와 도달 월, 수신거부 방법을 넣는다. 공지는 월간 알림 수 상한(PRO-02)에 세지 않고 별도 발송으로 기록한다. 시연에서는 미리보기로만 만든다.
 - **PRO-11** (v3.5) 월간 선별은 다음 선별 전까지 새 단계에 도달하는 고객에게 단계 도달 알림을 고른다. 단계마다 한 번만 보낸다. 같은 달에 절감 추천이나 성수기 알림 대상이면 하나로 합친다(PRO-09와 같은 방식). PRO-04 규칙(수신 동의, 야간 발송 금지)을 따른다.
+- **(T9) 구현 세부** (요구사항을 바꾸지 않고 정한 것)
+  - 선별일은 분석 기준일(달의 첫날)이고, "다음 선별 전"은 그다음 달 첫날 전까지다. 알림은 미리보기로만 만들고(PRO-04), 보낼 날짜(`send_on`)를 함께 적는다.
+  - 절감 추천 대상: 추천이 변경(상향·하향) 또는 유지 + 이벤트이고, 12개월 절감액·절감률이 정책 파일 하한 이상인 고객. 기록 부족 고객은 정책 파일 값에 따라 뺀다. 이미 접수된 셀프 변경이 있는 고객에게는 고객 알림을 보내지 않는다.
+  - 재알림 제한(PRO-05): 같은 요금제·이벤트 추천을 90일 안에 다시 알리지 않는다. 고객이 거절한 추천(추천 이력의 결과 "거절")은 거절한 날이 속한 분기가 끝날 때까지 알리지 않는다.
+  - 담당자 연락 대상(이탈 위험, 이용 기록 없음)도 알림 기록에 종류 "담당자 연락"으로 남겨 90일 재분류 제한에 쓴다. 고객에게는 나가지 않는다.
+  - 월 최대 수(PRO-02)는 고객 알림에 적용한다. 고르는 순서는 마감이 있는 성수기 알림(변경 권유·예산 안내)이 먼저, 그다음 12개월 절감액이 큰 순서다. 넘친 절감 추천은 기록하지 않아 다음 달에 다시 후보가 된다. 혜택 공지(PRO-10)와 단계 도달 알림만 있는 알림(PRO-11)은 혜택 안내라 세지 않는다(단계 도달은 한 달만 대상이라 밀리면 사라지기 때문). 다른 알림과 합친 단계 도달은 함께 센다.
+  - 합친 알림은 대표 알림의 날짜에 보낸다. 대표 순서는 성수기 변경 권유 → 예산 안내 → 절감 추천 → 단계 도달이다. 성수기 변경 권유에는 12개월 비교가 들어 있어 절감 추천 문장은 따로 넣지 않는다.
+  - 단계 도달 알림(PRO-11)은 다음 달부터 새 단계가 적용되는 고객(남은 개월 수 1)에게 보낸다. 이미 그 단계로 알림을 받았으면 보내지 않는다.
+  - 수신거부는 앱 저장소의 `opt_outs` 표로 확인한다(실제 수신 동의 관리는 범위 밖, 0장).
+  - 리포트 파이프라인(Claude)은 선별 대상에게 따로 돌린다. 선별과 알림 문구에는 AI를 쓰지 않는다(PRO-01, PRO-03).
 
 ### 셀프 요금제 변경 (CHG, v3.0)
 - **CHG-01** AI는 요금제 변경을 실행하지 않는다. 결제 권한자가 확인 화면에서 직접 요청할 때만 변경 요청이 기록된다.
@@ -347,6 +361,7 @@ DB가 아니라 마크다운 파일입니다. 리포트의 **문장 근거**(왜
 - **DQ-02** 형식·범위·중복 위반이 있는 고객은 그달 선별에서 빼고 이유를 남긴다. 이상치는 빼지 않고 "확인 필요"로 표시한다(성수기처럼 정상인 급증이 있기 때문). 연속성 위반은 성수기 판정을 하지 않는다(SIM-07의 "판정 안 함").
 - **DQ-03** 전체 고객 중 통과 비율이 95% 미만이면 선별 전체를 멈추고 담당자에게 알린다. 원천 데이터 문제일 가능성이 크기 때문이다.
 - **DQ-04** 점검 결과(통과율, 항목별 건수, 제외된 가칭 코드)를 저장한다. 고객 이름은 넣지 않는다.
+- **(T9) 구현 세부**: 점검 범위는 기준일 전 24개월이다. 이상치·통과율 기준(5배, 95%)은 코드 상수로 두고, 바꿀 때는 이 명세와 테스트를 함께 고친다(정책 파일은 외부 전송 기준을 담는 보안 문서라서 넣지 않음). 결과는 앱 저장소 `quality_checks` 표에 남긴다. 이용 기록이 전혀 없는 고객은 위반이 아니다(담당자 연락 대상, PRO-02).
 
 ### 운영과 개선 순환 (OPS, v3.3)
 - **OPS-01** 저장소에 올릴 때마다 자동 테스트(CI)를 돌린다. 테스트가 실패하면 main 브랜치에 합치지 않는다. 검색 평가(EVAL-02)는 T7 이후 CI에 넣는다.
@@ -550,15 +565,15 @@ v3.6에서 추가한 결정입니다. 2026-11-08 G3 검토 중 사용자 제안,
 | SIM-05, 06 월별 일정·부가세 | `test_schedule_starts_next_month_and_applies_discount_only_during_promotion`, `test_schedule_sums_match_twelve_month_totals`(SIM-05). `test_vat_is_ten_percent_rounded_down`, `test_twelve_month_totals_are_sums_of_months`, `test_saving_percent_rounds_half_up`(SIM-06) | 완료 (T3, T10) |
 | KNW-07 문서 대상 구분 | `test_guides_are_internal_and_others_customer`, `test_customer_search_never_returns_internal_documents`, `test_missing_audience_is_refused`, `test_tool_marks_audience` | 완료 (T4) |
 | EVAL-06 고객 질문 평가 | — | T12, T7 |
-| PRO-01~06 선제 알림 | — | T9 |
+| PRO-01~06 선제 알림 | `test_saving_notice_for_user_002`(PRO-01, 03), `test_thresholds_come_from_policy`, `test_monthly_limit_keeps_peak_notices_first`, `test_low_data_customer_is_excluded_by_policy`, `test_churn_risk_and_no_usage_go_to_staff_only`(PRO-02), `test_records_summary_and_audit_have_codes_only`(PRO-04 미리보기, PRO-06, SEC-12), `test_same_month_rerun_does_not_repeat`, `test_rejected_recommendation_waits_until_next_quarter`, `test_opt_out_customer_gets_nothing`(PRO-05), `test_summary_is_sent_automatically_when_sender_exists`(NTF-02) | 완료 (T9) |
 | SIM-07, 08 성수기 판정·계절 반영 예측 | `test_tax_firm_peaks_and_evidence`, `test_gift_shop_peaks_but_growth_months_are_not_peaks`, `test_one_off_spike_is_not_a_peak`, `test_short_history_is_not_judged`, `test_threshold_is_inclusive_and_needs_both_years`, `test_bundles_wrap_around_new_year`(SIM-07), `test_tax_firm_monthly_forecast`, `test_gift_shop_growth_is_applied`, `test_tax_firm_recommendation_changes_with_season`, `test_three_month_average_alone_would_keep_basic`, `test_gift_shop_keeps_plan`, `test_upcoming_peak_and_extra_cost`, `test_growth_is_clamped`, `test_schedule_sums_match_totals_for_seasonal`(SIM-08), `test_existing_200_customers_are_unchanged`(결정 30) | 완료 (T3b) |
-| PRO-07~09 성수기 알림 | — | T9 |
+| PRO-07~09 성수기 알림 | `test_seasonal_customers`(user_201 변경 권유·합치기·2026-11-17, user_202 예산 안내, user_203 없음), `test_reminder_in_december_only_after_first_notice`(2026-12-24, 묶음마다 두 번), `test_no_reminder_after_change_request` | 완료 (T9) |
 | DOC-08, VIZ-05 다가오는 성수기·24개월 그래프 | `test_review_has_upcoming_peak_section`, `test_upcoming_peak_in_every_format`(DOC-08), `test_seasonal_captions`, `test_usage_chart_shows_24_months`(VIZ-05) | 완료 (T3b). 화면 표시는 T13 |
 | CHG-08 일시 상향 후 복귀 예약 | — | T11b (확장) |
 | HAR-01~04 개발 하네스 | `test_protected_paths_are_blocked`, `test_normal_work_is_allowed`, `test_bad_input_does_not_block`, `test_tests_run_only_for_code_changes`, `test_settings_register_both_hooks`, `test_claude_md_lists_protected_files` | 있음 (T0b). PC에서 `/hooks` 등록 확인은 사용자 |
 | OPS-01 CI | `.github/workflows/ci.yml` | 완료 (T0b). 첫 실행 통과(2026-11-07, 커밋 5bb0109) |
 | RET-04, SIM-09 데이터 접근·기준일 | `test_only_data_access_queries_billing_tables`, `test_simulator_names_point_to_data_access`, `test_load_usage_respects_range`, `test_identity_and_unknown_customer`(RET-04), `test_default_as_of`, `test_as_of_from_environment`, `test_explicit_as_of_wins_over_environment`, `test_invalid_as_of_is_rejected`(SIM-09) | 완료 (T3c) |
-| DQ-01~04 데이터 품질 | — | T9 |
+| DQ-01~04 데이터 품질 | `test_clean_data_passes_and_seasonal_spikes_are_only_flagged`, `test_each_rule_is_detected`(DQ-01, 02), `test_excluded_customers_are_left_out_of_selection`(DQ-02), `test_low_pass_rate_stops_the_whole_selection`(DQ-03, 04) | 완료 (T9) |
 | AGT-03 API 견고성 | `test_retryable_errors_are_retried_with_backoff`, `test_retries_stop_after_two`, `test_auth_error_is_not_retried`, `test_truncated_answer_is_not_published`, `test_classify_error` | 있음 (T5) |
 | KNW-08 하이브리드 검색 | — | T7 |
 | OPS-02~04 운영 지표·개선 순환 | — | T13, T7 |
@@ -566,7 +581,7 @@ v3.6에서 추가한 결정입니다. 2026-11-08 G3 검토 중 사용자 제안,
 | REP-03, 05 (v3.5) 첫 사용 안내·인용 | `test_no_usage_report`, `test_no_usage_report_needs_onboarding_citation`, `test_no_usage_customer_searches_guide`(`test_no_usage_customer_gets_notice_without_search`를 바꿈), `test_no_usage_notice_without_citation_is_rewritten_then_rejected` | 완료 (T5b) |
 | REP-06 (v3.5) 이탈 위험 고객 혜택 안내 | `test_churn_risk_report_has_loyalty_placeholders`(필수 여부·응대 안내 구역·최고 단계), `test_churn_risk_below_top_tier_needs_remaining_months`, `test_loyalty_values_for_each_customer` | 완료 (T3d) |
 | LOY-01~05 (v3.5) 장기 이용 혜택 | `test_loyalty_tier_boundaries`(0·5·6·11·12·23·24·60개월), `test_loyalty_tiers_come_from_the_table`(LOY-02), `test_bonus_adds_to_included_amounts_rounded_down`, `test_next_tier_is_reached_during_the_horizon`, `test_bonus_stays_when_plan_changes`, `test_keep_with_loyalty_promotion`(LOY-03), `test_top_tier_and_no_usage_customers`, 손으로 다시 계산한 기대값(`test_simulator.py`, `test_seasonality.py` 등), `test_existing_200_customers_are_unchanged`(지문 재기록). 문서(LOY-04): `test_fourteen_documents_with_metadata_and_sections`, `test_knowledge_has_no_amounts_or_rates`. 서류·해설(LOY-05): `test_review_states_loyalty_tier`, `test_captions_for_user_002_match_hand_calculation`, `test_seasonal_captions` | 완료 (T3d) |
-| PRO-10, 11 (v3.5) 혜택 공지·단계 도달 알림 | — | T9 (G1 변경 4 후) |
+| PRO-10, 11 (v3.5) 혜택 공지·단계 도달 알림 | `test_loyalty_announcement_once_for_everyone`(PRO-10), `test_tier_notice_next_month_once`(PRO-11) | 완료 (T9) |
 | CHG-01~07 셀프 변경 | `test_change_module_uses_no_ai`(CHG-01), `test_usage_change_after_confirmation_forces_reconfirm`, `test_tampered_quote_is_rejected`, `test_changed_recommendation_is_shown`(CHG-02), `test_quote_for_user_002_matches_hand_calculation`, `test_quote_equals_simulator_and_review_document`, `test_invoice_info_must_be_confirmed`, `test_downgrade_shows_notice_and_keep_is_not_changeable`(CHG-03), `test_member_cannot_change`, `test_only_admin_of_same_customer_can_cancel`(CHG-04), `test_cancel_before_deadline_then_new_request_allowed`, `test_cancel_after_deadline_is_refused`, `test_applied_request_cannot_be_cancelled`(CHG-05), `test_submit_records_request_history_audit_and_message`, `test_double_click_creates_one_request`, `test_simultaneous_insert_is_blocked_by_index`, `test_open_request_blocks_a_different_change`(CHG-06), `test_expired_notification_needs_reconfirm`, `test_stale_analysis_cannot_be_used`(CHG-07) | 완료 (T11). 사내 채널 실제 전송은 T5(NTF), 화면은 T13 |
 | DOC-01~07 서류 | `test_review_amounts_match_hand_calculation`, `test_confirmation_needs_change_and_has_no_expiry`(DOC-01), `test_xlsx_values_match`, `test_docx_values_match`, `test_pdf_values_match`(DOC-02, 03), `test_document_number_and_validity`(DOC-04), `test_issue_records_document_and_audit_without_name`(DOC-05), `test_same_input_same_hash`(DOC-06), `test_other_customer_is_denied`, `test_issue_does_not_write_files`(DOC-07), `test_schedule_mismatch_blocks_document` | 완료 (T10) |
 | VIZ-01~04 그래프·해설 | `test_chart_pngs_open`, `test_chart_palette_order_is_fixed`, `test_korean_pdf_font_is_registered`. 해설(VIZ-04): `test_captions_for_user_002_match_hand_calculation`, `test_captions_overage_and_keep`, `test_captions_explain_stability_and_short_history`, `test_caption_numbers_come_from_document`, `test_captions_in_pdf_and_docx`, `test_captions_module_uses_no_ai`. 화면 표시와 그래프 아래 표(VIZ-02)는 T13 | 일부 (T10) |

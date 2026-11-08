@@ -51,6 +51,8 @@ python -m pytest -q               # 전체 테스트
 python src/simulator.py user_002  # 고객 1명 계산 결과
 python src/agent.py user_002      # 리포트 작성(.env에 ANTHROPIC_API_KEY 필요, 결과는 output/)
 python src/agent.py --purge       # 보관 기간이 지난 리포트·기록 지우기
+python src/batch.py               # 월간 선별: 데이터 품질 점검 → 알림 미리보기·사내 요약(output/selection/)
+python src/batch.py --announce-loyalty  # 장기 이용 혜택 시작 공지 미리보기(한 번만)
 ```
 
 ## 실제 회사에 도입할 때: 지식 문서와 평가 질문

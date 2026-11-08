@@ -19,7 +19,14 @@ CREATE TABLE IF NOT EXISTS recommendation_history (
 );
 CREATE TABLE IF NOT EXISTS notifications (
     notification_id TEXT PRIMARY KEY, code TEXT NOT NULL, created_at TEXT NOT NULL, valid_until TEXT NOT NULL,
-    plan_id TEXT, promo_id TEXT, saving_12m INTEGER, status TEXT NOT NULL
+    plan_id TEXT, promo_id TEXT, saving_12m INTEGER, status TEXT NOT NULL,
+    kind TEXT, parts TEXT, peak_months TEXT, stage TEXT, send_on TEXT, tier INTEGER, run_id TEXT
+);
+CREATE TABLE IF NOT EXISTS opt_outs (code TEXT PRIMARY KEY, opted_out_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS quality_checks (
+    run_id TEXT PRIMARY KEY, checked_at TEXT NOT NULL, total INTEGER NOT NULL, passed INTEGER NOT NULL,
+    pass_rate REAL NOT NULL, counts TEXT NOT NULL, excluded_codes TEXT NOT NULL, flagged_codes TEXT NOT NULL,
+    stopped INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS change_requests (
     request_id TEXT PRIMARY KEY, code TEXT NOT NULL, requested_at TEXT NOT NULL, requested_by_role TEXT NOT NULL,
@@ -40,7 +47,9 @@ CREATE TABLE IF NOT EXISTS documents (
 
 
 # 이미 만들어진 app.db에 나중에 추가한 열(CREATE TABLE IF NOT EXISTS는 열을 추가하지 않는다)
-ADDED_COLUMNS = {"change_requests": ["quote_sha256 TEXT", "cancelled_at TEXT", "applied_at TEXT"]}
+ADDED_COLUMNS = {"change_requests": ["quote_sha256 TEXT", "cancelled_at TEXT", "applied_at TEXT"],
+                 "notifications": ["kind TEXT", "parts TEXT", "peak_months TEXT", "stage TEXT", "send_on TEXT",
+                                   "tier INTEGER", "run_id TEXT"]}
 
 
 def connect(path: Path = APP_DB_PATH) -> sqlite3.Connection:

@@ -104,6 +104,28 @@ def load_identity(conn: sqlite3.Connection, user_id: str) -> dict:
     return {"name": row[0], "code": row[1]}
 
 
+def customer_ids(conn: sqlite3.Connection) -> list[str]:
+    """모든 고객 ID(월간 선별 대상 목록)."""
+    return [row[0] for row in conn.execute("SELECT user_id FROM users ORDER BY user_id")]
+
+
+def code_map(conn: sqlite3.Connection) -> dict[str, str]:
+    """고객 ID → 가칭 코드. 선별 결과와 사내 기록에 이름 대신 쓴다(SEC-12)."""
+    return {row[0]: row[1] for row in conn.execute("SELECT user_id, code FROM customer_codes ORDER BY user_id")}
+
+
+def load_usage_rows(conn: sqlite3.Connection) -> list[dict]:
+    """데이터 품질 점검용 원본 이용 기록 전부(DQ-01). 값을 고치거나 거르지 않는다.
+
+    달 형식이 틀린 기록(예: 2026-13)은 기간 조건으로 거르면 보이지 않으므로 기간은 점검하는 쪽에서 고른다.
+    """
+    rows = conn.execute(
+        "SELECT user_id, target_month, api_calls_used, storage_gb_used, active_days FROM usage_logs"
+        " ORDER BY user_id, target_month"
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+
 def customer_names(conn: sqlite3.Connection) -> list[str]:
     """DB에 있는 모든 고객 이름. 외부 전송 전 검사와 질문 가림에만 쓴다(SEC-08, ASK-05)."""
     return [row[0] for row in conn.execute("SELECT name FROM users ORDER BY user_id")]
