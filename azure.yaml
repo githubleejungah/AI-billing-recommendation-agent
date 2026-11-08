@@ -1,0 +1,7 @@
+# azd 배포 정의(DEP-01). 순서와 명령은 docs/deploy_guide.md.
+name: ai-billing-recommendation-agent
+services:
+  web:
+    project: .
+    language: py
+    host: appservice

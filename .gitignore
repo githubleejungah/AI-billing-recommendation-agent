@@ -22,3 +22,6 @@ __pycache__/
 
 # Claude Code의 개인 설정(서버 승인 등)
 .claude/settings.local.json
+
+# azd 환경(배포 때 입력한 값이 들어 있음)
+.azure/

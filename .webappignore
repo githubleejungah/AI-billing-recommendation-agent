@@ -1,0 +1,21 @@
+# azd가 App Service로 올릴 때 뺄 파일(DEP-02, 04). 비밀값·실제 기록·참고 자료는 올리지 않는다.
+.env
+.env.*
+.azure/
+.git/
+.claude/
+.venv/
+__pycache__/
+.pytest_cache/
+data/
+logs/
+output/
+reference/
+eval/results/
+database/billing_mock.db
+tests/
+design/
+docs/
+eval/
+.github/
+.mcp.json
