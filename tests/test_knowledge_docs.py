@@ -100,3 +100,17 @@ def test_retrieval_set_targets_existing_documents():
     for q in questions:
         assert set(q["target_docs"]) <= stems, q["id"]
         assert bool(q["target_docs"]) == q["scored"], q["id"]
+
+
+def test_holdout_set_is_separate_and_points_to_real_chunks():
+    """확인용 질문(EVAL-05, 2026-11-08)은 10개 이상이고, 조정용 세트와 겹치지 않으며, 정답 조각이 실제로 있다."""
+    import knowledge
+
+    holdout = json.loads((ROOT / "eval" / "retrieval_holdout.json").read_text(encoding="utf-8"))["questions"]
+    tuning = json.loads((ROOT / "eval" / "retrieval_set.json").read_text(encoding="utf-8"))["questions"]
+    assert sum(q["scored"] for q in holdout) >= 10
+    assert not {q["question"] for q in holdout} & {q["question"] for q in tuning}
+    chunk_ids = {c.chunk_id for c in knowledge.KnowledgeBase().chunks}
+    for q in holdout:
+        assert set(q["answer_chunks"]) <= chunk_ids, q["id"]
+        assert bool(q["answer_chunks"]) == q["scored"], q["id"]

@@ -323,6 +323,19 @@ def test_rewrite_once_after_validation_failure(conn, pol, paths):
     assert entries[-1]["kinds"] == ["card", "documents", "rewrite"]
     validation = [e for e in audit.read(paths["audit_path"]) if e["event"] == "validation"][0]
     assert validation["rewrites"] == 1 and validation["result"] == "통과"
+    # 실행 기록에는 시도마다 걸린 규칙의 종류만 남는다(지어낸 숫자 자체는 남지 않음)
+    log = json.loads(result.run_log_path.read_text(encoding="utf-8"))
+    assert log["validation"] == [{"attempt": 1, "kinds": ["자리표시자 바깥에 숫자가 있습니다"]},
+                                 {"attempt": 2, "kinds": []}]
+    assert "42000" not in json.dumps(log, ensure_ascii=False)
+
+
+def test_problem_kinds_drop_details():
+    problems = ["자리표시자 바깥에 숫자가 있습니다: 42000", "이번 분석에서 검색하지 않은 조각 인용: promo_x#9",
+                "필수 자리표시자 없음: {saving_12m}", "'추천' 구역에 근거 인용이 없음(REP-05)",
+                "자리표시자 바깥에 숫자가 있습니다: 7"]
+    assert report.problem_kinds(problems) == ["'추천' 구역에 근거 인용이 없음(REP-05)", "이번 분석에서 검색하지 않은 조각 인용",
+                                              "자리표시자 바깥에 숫자가 있습니다", "필수 자리표시자 없음"]
 
 
 def test_second_failure_rejects_without_publishing(conn, pol, paths):

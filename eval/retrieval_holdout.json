@@ -1,0 +1,25 @@
+{
+  "about": "검색 확인용 질문(EVAL-05). 검색 설정을 조정할 때 쓰지 않는다. 기존 평가 세트(retrieval_set.json)로 조정한 효과가 새 질문에서도 나오는지 보는 데만 쓴다.",
+  "written_at": "2026-11-08",
+  "written_by": "Claude(개발 보조). 사용자 결정(2026-11-08): 상용화 전에는 고객사 업무 담당자의 실제 질문으로 바꾸고, 지금은 이 세트를 참고값으로 쓴다.",
+  "bias_note": "작성자가 지식 문서를 이미 읽은 상태라 질문이 문서 표현을 따라갈 수 있다(점수가 실제보다 높게 나올 수 있음). 줄이기 위해 문서 소제목만 보고 정답 조각을 정했고, 질문은 영업 담당자·고객의 말투로 문서와 다른 낱말을 골라 썼다. 이 세트를 쓰기 전에는 이 질문들로 검색을 한 번도 돌리지 않았다.",
+  "how_to_score": "retrieval_set.json과 같다. scored=true는 정답 조각이 상위 3개 안에 있으면 맞힘, scored=false는 빈 결과가 나와야 맞힘.",
+  "questions": [
+    {"id": "H01", "scored": true, "question": "오래 쓴 고객은 제공량 더 주는 거 있나요?", "answer_chunks": ["benefit_loyalty#1"]},
+    {"id": "H02", "scored": true, "question": "장기 고객 혜택은 따로 신청해야 받는 건가요?", "answer_chunks": ["benefit_loyalty#2"]},
+    {"id": "H03", "scored": true, "question": "플랜을 바꿔도 장기 고객 혜택은 그대로 남아?", "answer_chunks": ["benefit_loyalty#3"]},
+    {"id": "H04", "scored": true, "question": "할인 행사랑 장기 고객 혜택을 동시에 받을 수 있어?", "answer_chunks": ["benefit_loyalty#3"]},
+    {"id": "H05", "scored": true, "question": "업그레이드 얘기는 어떤 순서로 꺼내면 돼?", "answer_chunks": ["guide_upgrade#1"]},
+    {"id": "H06", "scored": true, "question": "프로 할인 끝나는 달이 오면 고객한테 뭐라고 해야 돼?", "answer_chunks": ["guide_upgrade#4", "promo_pro_upgrade#3"]},
+    {"id": "H07", "scored": true, "question": "가격 낮은 플랜으로 옮기기 전에 체크할 거 있나", "answer_chunks": ["guide_downgrade#2", "policy_plan_change#3"]},
+    {"id": "H08", "scored": true, "question": "엔터프라이즈인데 쓰는 양이 별로 없으면 내려야 하나요", "answer_chunks": ["plan_enterprise#4"]},
+    {"id": "H09", "scored": true, "question": "청구 기간 중간에 변경 신청하면 언제 반영돼요?", "answer_chunks": ["policy_plan_change#1"]},
+    {"id": "H10", "scored": true, "question": "할인 받는 중에 요금제를 또 바꾸면 할인은 어떻게 돼?", "answer_chunks": ["policy_plan_change#4"]},
+    {"id": "H11", "scored": true, "question": "로그인을 거의 안 하는 고객 계정은 어떻게 챙겨야 해", "answer_chunks": ["guide_churn_risk#1", "guide_churn_risk#2"]},
+    {"id": "H12", "scored": true, "question": "결제만 되고 서비스는 안 쓰는 고객한테 처음에 뭘 보내지", "answer_chunks": ["guide_no_usage#1", "guide_no_usage#4"]},
+    {"id": "H13", "scored": true, "question": "베이직 쓰다가 프로로 넘어가야 하는 때는 언제야", "answer_chunks": ["plan_basic#4"]},
+    {"id": "H14", "scored": true, "question": "소규모 스타트업 팀이면 어떤 플랜이 좋아?", "answer_chunks": ["plan_basic#1"]},
+    {"id": "N03", "scored": false, "question": "회사 주차 등록은 어디서 해?", "answer_chunks": []},
+    {"id": "N04", "scored": false, "question": "연차 휴가 신청하는 방법 알려줘", "answer_chunks": []}
+  ]
+}

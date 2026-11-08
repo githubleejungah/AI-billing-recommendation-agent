@@ -210,11 +210,66 @@ def test_bonus_stays_when_plan_changes(conn):
     assert (pro["included_api_calls"], pro["included_storage_gb"]) == (55000, 220)
 
 
+def test_bonus_flips_a_random_customer_to_downgrade(conn):
+    # user_198(무작위 고객, 일부러 맞추지 않은 자연 사례): 엔터프라이즈, 가입 2026-06-25 → 기준일 4개월(단계 없음)
+    # 예상 = 최근 3개월 평균: API (124,806 + 115,646 + 118,511) / 3 = 119,654.3 → 119,654, 스토리지 783.8 / 3 → 261.3GB
+    # 프로 2026-12(단계 없음, 50,000·200): 80,000 + ⌈69.654⌉×1,500 + ⌈61.3⌉×300 = 80,000 + 105,000 + 18,600 = 203,600
+    #      2027-01~06(1단계 52,500·210): 80,000 + 68×1,500 + 52×300 = 197,600 × 6 = 1,185,600
+    #      2027-07~11(2단계 55,000·220): 80,000 + 65×1,500 + 42×300 = 190,100 × 5 = 950,500
+    #      합계 2,339,700 < 엔터프라이즈 200,000 × 12 = 2,400,000 → 하향, 절감 60,300(2.5% → 3%)
+    # 지금 달만 보면 프로(203,600)가 더 비싸다. 혜택 전에는 엔터프라이즈 유지였다(T3d 추천 분포 기록).
+    result = run(conn, "user_198")
+    r = result["recommendation"]
+    assert (r["action"], r["plan_id"], r["saving_12m"], r["saving_pct"], r["monthly_saving"]) == (
+        "downgrade", "PLAN_PRO", 60300, 3, 5025)
+    assert option(result, "PLAN_PRO")["monthly"]["total"] == 203600
+
+
 def test_top_tier_and_no_usage_customers(conn):
     top = run(conn, "user_015")["loyalty"]  # 가입 2023-03-01 → 44개월
     assert (top["tier"], top["is_top"], top["next"]) == (3, True, None)
     no_usage = run(conn, "user_010")["loyalty"]  # 가입 2025-06-01 → 17개월, 7개월 뒤 3단계
     assert (no_usage["tier"], no_usage["next"]["in_months"], no_usage["next"]["month"]) == (2, 7, "2027-06")
+
+
+def _reference_months(conn, user_id, plan_row, as_of=(2026, 11)):
+    """시뮬레이터 코드를 쓰지 않고 명세 2장 규칙만으로 다시 계산한 비교 기간 12개월 청구액(할인 전).
+
+    원천 표를 직접 읽고, 단계 기준·비율은 init_db의 원천 데이터에서 가져온다. 3개월 평균 고객만 대상이다.
+    """
+    signup = conn.execute("SELECT signup_date FROM users WHERE user_id = ?", (user_id,)).fetchone()[0]
+    sy, sm, sd = (int(x) for x in signup.split("-"))
+    rows = conn.execute("SELECT api_calls_used, storage_gb_used FROM usage_logs WHERE user_id = ? "
+                        "ORDER BY target_month DESC LIMIT 3", (user_id,)).fetchall()
+    api = round(sum(r[0] for r in rows) / len(rows))
+    gb = round(sum(r[1] for r in rows) / len(rows), 1)
+    _, _, base, inc_api, inc_gb, per_1k, per_gb = plan_row
+    totals = []
+    for offset in range(1, 13):  # 기준일 다음 달부터 12개월, 그달 1일의 가입 기간
+        y, m = as_of[0] + (as_of[1] - 1 + offset) // 12, (as_of[1] - 1 + offset) % 12 + 1
+        tenure = (y - sy) * 12 + (m - sm) - (1 if 1 < sd else 0)
+        pct = max([p for _, _, need, p in init_db.LOYALTY_TIERS if tenure >= need], default=0)
+        limit_api = inc_api + inc_api * pct // 100
+        limit_gb = inc_gb + int(inc_gb * pct // 100)
+        over_api = max(0, api - limit_api)
+        over_gb = max(0.0, round(gb - limit_gb, 1))
+        totals.append(base + -(-over_api // 1000) * per_1k + int(-(-over_gb // 1)) * per_gb)
+    return totals
+
+
+def test_every_customer_matches_an_independent_recalculation(conn):
+    """시나리오 고객만 손으로 계산했으므로, 나머지 고객의 혜택 계산 버그를 잡기 위해 전원을 따로 계산해 맞춘다."""
+    plans = {row[0]: tuple(row) for row in conn.execute("SELECT * FROM plans")}
+    checked = 0
+    for (user_id,) in conn.execute("SELECT user_id FROM users ORDER BY user_id").fetchall():
+        result = run(conn, user_id)
+        if result["status"] != "ok" or result["forecast"]["method"] != "3개월 평균":
+            continue
+        for o in result["options"]:
+            expected = _reference_months(conn, user_id, plans[o["plan_id"]])
+            assert [c["total"] for c in o["months_cost"]] == expected, (user_id, o["plan_id"])
+        checked += 1
+    assert checked >= 195  # 기록 없는 고객과 계절 반영 고객만 빠진다
 
 
 # --- 추천 안정성(SIM-04) ---

@@ -286,6 +286,14 @@ def _check_citations(draft: str, retrieved: dict[str, dict], problems: list[str]
     return cited
 
 
+def problem_kinds(problems: list[str]) -> list[str]:
+    """실행 기록용 문제 종류(EVAL-03, 첫 시도 실패 원인 분석). 문제 문구에서 ":" 앞의 고정 규칙 이름만 남긴다.
+
+    ":" 뒤에는 Claude가 쓴 숫자·조각ID·키 이름이 오므로 버린다. 같은 종류는 한 번만, 정렬해서 남긴다.
+    """
+    return sorted({problem.split(":")[0].strip() for problem in problems})
+
+
 def fill(draft: str, sim: dict, registry: dict | None = None) -> str:
     registry = registry or load_registry()
     filled = values(sim, registry)

@@ -543,7 +543,7 @@ v3.6에서 추가한 결정입니다. 2026-11-08 G3 검토 중 사용자 제안,
 | AGT-01~06 에이전트 루프 | `test_happy_path_produces_report_slack_history_and_log`(6단계 기록·모델 ID), `test_search_limit_stops_the_run`(AGT-01), `test_rewrite_once_after_validation_failure`, `test_second_failure_rejects_without_publishing`, `test_unretrieved_citation_is_rejected`(AGT-05), `test_guard_block_means_nothing_is_sent`, `test_model_outside_list_does_nothing` | 있음 (T5, 가짜 Claude). 실제 API는 T6 |
 | NTF-01~03 알림 | `test_slack_message_shape`, `test_send_requires_flag_and_webhook`, `test_rejected_report_is_never_sent` | 있음 (T5) |
 | NTF-04 중복 전송 방지 | `test_same_report_is_sent_once` | 있음 (T5) |
-| EVAL-01~05 평가 | `test_retrieval_set_targets_existing_documents`(평가 세트 형식). EVAL-05의 질문 먼저 쓰기는 T1에서 완료(질문 파일을 문서보다 먼저 PC에 저장) | 평가 실행은 T7 |
+| EVAL-01~05 평가 | `test_retrieval_set_targets_existing_documents`(평가 세트 형식). EVAL-05의 질문 먼저 쓰기는 T1에서 완료(질문 파일을 문서보다 먼저 PC에 저장). (11-08) 확인용 질문 세트 `test_holdout_set_is_separate_and_points_to_real_chunks`, 첫 시도 실패 종류 기록(EVAL-03) `test_problem_kinds_drop_details`, 전원 독립 재계산 `test_every_customer_matches_an_independent_recalculation` | 평가 실행은 T7. 확인용 세트 첫 측정 7/14(tasks.md "성능 보완 메모") |
 | UI-01 로컬 전용 | `test_streamlit_binds_localhost_only`(설정 파일) | 일부 (T0). 실제 접속 확인은 T13 |
 | UI-02~09 화면 | — | T8(목업), T13(구현) |
 | UI-10 (v3.6) 근거 보기 모달 | (예정) 인용 표시를 조각 원문과 연결하는 함수 테스트: 검색된 조각만 연결, 고객 화면에서 internal 조각 거부, 다시 검색하지 않음 | T8(목업), T13(구현) |

@@ -188,6 +188,7 @@ class RunLog:
     steps: list[dict] = field(default_factory=list)
     calls: list[dict] = field(default_factory=list)
     searches: list[str] = field(default_factory=list)
+    validation: list[dict] = field(default_factory=list)  # 시도마다 걸린 규칙의 종류(내용 없음)
     status: str = "진행 중"
     error_kind: str | None = None
     _mark: float = field(default_factory=time.monotonic, repr=False)
@@ -202,7 +203,7 @@ class RunLog:
     def to_dict(self) -> dict:
         return {"run_id": self.run_id, "alias": self.alias, "model": self.model, "status": self.status,
                 "error_kind": self.error_kind, "steps": self.steps, "calls": self.calls,
-                "search_count": len(self.searches)}
+                "search_count": len(self.searches), "validation": self.validation}
 
 
 @dataclass
@@ -413,6 +414,7 @@ def run(user_id: str, *, client: ClaudeClient, model: str, conn: sqlite3.Connect
 
         # 5. 검증(AGT-05: 실패하면 문제 목록을 주고 1회 다시 쓰기)
         problems = report.check_draft(draft, sim, retrieved, registry)
+        log.validation.append({"attempt": 1, "kinds": report.problem_kinds(problems)})
         rewrites = 0
         if problems:
             rewrites = 1
@@ -421,12 +423,14 @@ def run(user_id: str, *, client: ClaudeClient, model: str, conn: sqlite3.Connect
                              + "\n".join(f"- {mask_free_digits(p)}" for p in problems)})
             draft = converse(("rewrite",))
             problems = report.check_draft(draft, sim, retrieved, registry)
+            log.validation.append({"attempt": 2, "kinds": report.problem_kinds(problems)})
         filled = None
         if not problems:
             try:
                 filled = report.verify_and_fill(draft, sim, retrieved, registry)
             except report.ReportRejected as rejected:
                 problems = rejected.problems
+                log.validation.append({"attempt": "채운 뒤", "kinds": report.problem_kinds(problems)})
         audit.record("validation", audit_path, run_id=run_id, result="통과" if filled else "거부",
                      rewrites=rewrites, problem_count=len(problems))
         log.step("검증", f"초안 {len(draft)}자, 다시 쓰기 {rewrites}회",
