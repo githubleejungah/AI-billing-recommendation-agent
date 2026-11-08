@@ -27,6 +27,21 @@ user_202 (주)온누리선물몰, 베이직, 가입 2024-09(장기 고객 할인
 - 프로: 80,000×12 − 72,000 = 888,000 → 유지가 유리(변경 권유 없이 예산 안내 대상)
 
 user_203 (주)바람캠핑: 2025-08에만 60,000회(평소 9,000회). 한 해만 높으므로 성수기 아님 → 3개월 평균 예측.
+
+(T3d) 장기 이용 혜택 반영 후 값. 세 고객 모두 가입 24개월 이상이라 비교 기간 내내 3단계(15%)다.
+제공량: 베이직 11,500회·57GB, 프로 57,500회·230GB. 성수기 판정과 예측(위)은 그대로이고 금액만 바뀐다.
+user_201
+- 베이직: 평소 30,000 + ⌈8,500/1,000⌉×2,000 = 48,000. 성수기 30,000 + ⌈98.5⌉×2,000 + 103×500 = 279,500
+  12개월 = 48,000×8 + 279,500×4 = 1,502,000
+- 프로: 평소 80,000. 성수기 80,000 + ⌈52.5⌉×1,500 = 159,500. 12개월 = 80,000×8 + 159,500×4 = 1,278,000
+  전환 할인 72,000 → 1,206,000. 절감 296,000(19.7% → 20%). 월 절감 (1,502,000 − 1,278,000) ÷ 12 = 18,666.7 → 18,667
+- 다가오는 성수기 1~3월: 베이직 279,500×3 = 838,500(세액 27,950×3 = 83,850, 합계 922,350)
+  프로 (159,500−24,000)×2 + 159,500 = 430,500(세액 13,550×2 + 15,950 = 43,050, 합계 473,550)
+  평소 달 48,000 → 추가 비용 838,500 − 144,000 = 694,500
+user_202
+- 베이직: 평소 30,000(제공량 안), 1·2월 30,000 + ⌈38.5⌉×2,000 = 108,000, 8~10월 30,000 + 1×2,000 = 32,000
+  12개월 = 30,000×7 + 108,000×2 + 32,000×3 = 522,000. 장기 고객 할인 20,000 → 502,000(유지 + 이벤트)
+- 1~2월 108,000×2 = 216,000, 평소 달(비성수기 10개월 중앙값의 작은 쪽) 30,000 → 추가 156,000
 """
 
 from __future__ import annotations
@@ -80,15 +95,19 @@ def _h(value) -> str:
 
 
 def test_existing_200_customers_are_unchanged(db, conn):
-    """T3b 전 값과 같은지 지문으로 확인한다(데이터, 고객, 가칭 코드, 추천 결과)."""
+    """기존 고객 200명이 기록해 둔 값과 같은지 지문으로 확인한다(데이터, 고객, 가칭 코드, 추천 결과).
+
+    T3b에서 처음 기록했다. (T3d) 결정 44에 따라 다시 기록했다: 장기 이용 혜택으로 추천 결과가 바뀌고,
+    시나리오 고객 6명(user_004·005·016·017·019·020)의 사용량·가입일을 혜택에 맞춰 다시 맞췄다. 가칭 코드는 그대로다.
+    """
     with sqlite3.connect(db) as raw:
         usage = raw.execute("SELECT user_id, target_month, api_calls_used, storage_gb_used, active_days FROM usage_logs"
                             " WHERE user_id <= 'user_200' ORDER BY user_id, target_month").fetchall()
         users = raw.execute("SELECT * FROM users WHERE user_id <= 'user_200' ORDER BY user_id").fetchall()
         codes = raw.execute("SELECT * FROM customer_codes WHERE user_id <= 'user_200' ORDER BY user_id").fetchall()
-    assert _h([list(r) for r in usage]) == "3553c74e25d902a1"
-    assert _h([list(r) for r in users]) == "7028aa485ff6d564"
-    assert _h([list(r) for r in codes]) == "7e9ab66462297b25"
+    assert _h([list(r) for r in usage]) == "046de52b242ead71"  # T3b: 3553c74e25d902a1
+    assert _h([list(r) for r in users]) == "58292d7e5b222410"  # T3b: 7028aa485ff6d564 (user_019 가입일)
+    assert _h([list(r) for r in codes]) == "7e9ab66462297b25"  # 그대로
     results = []
     for user_id in [u[0] for u in users]:
         r = simulator.simulate(conn, user_id)
@@ -99,7 +118,7 @@ def test_existing_200_customers_are_unchanged(db, conn):
         assert r["forecast"]["method"] == "3개월 평균"
         results.append([user_id, rec["plan_id"], rec["promo_id"], rec["current_total_12m"], rec["recommended_total_12m"],
                         r["stability"]["status"], [m["total"] for m in r["schedule"]["recommended"]]])
-    assert _h(results) == "77c68263bf3995fc"
+    assert _h(results) == "15f9f270aa8b9bc9"  # T3b: 77c68263bf3995fc
 
 
 # --- 성수기 판정(SIM-07) ---
@@ -184,12 +203,12 @@ def test_tax_firm_recommendation_changes_with_season(sims):
     rec = r["recommendation"]
     assert (rec["action"], rec["plan_id"], rec["promo_id"]) == ("upgrade", "PLAN_PRO", "PROMO_PRO_UPGRADE")
     assert (rec["current_total_12m"], rec["recommended_total_12m"], rec["saving_12m"], rec["saving_pct"]) \
-        == (1540000, 1248000, 292000, 19)
-    assert rec["monthly_saving"] == 18333  # (1,540,000 − 1,320,000) ÷ 12 = 18,333.3
+        == (1502000, 1206000, 296000, 20)
+    assert rec["monthly_saving"] == 18667  # (1,502,000 − 1,278,000) ÷ 12 = 18,666.7
     assert [m["total"] for m in r["schedule"]["baseline"]] == \
-        [50000, 285000, 285000, 285000, 50000, 285000] + [50000] * 6
+        [48000, 279500, 279500, 279500, 48000, 279500] + [48000] * 6
     assert [m["total"] for m in r["schedule"]["recommended"]] == \
-        [56000, 146000, 146000, 170000, 80000, 170000] + [80000] * 6
+        [56000, 135500, 135500, 159500, 80000, 159500] + [80000] * 6
     assert r["stability"]["status"] == "안정"
 
 
@@ -198,15 +217,16 @@ def test_three_month_average_alone_would_keep_basic(conn):
     plans = simulator.load_plans(conn)
     by_id = {p.plan_id: p for p in plans}
     expected = {"api_calls": 20000, "storage_gb": 45.0}
+    bonus = simulator.loyalty(45, simulator.load_loyalty_tiers(conn), simulator.AS_OF)  # 3단계
     options = simulator._compare(plans, simulator.load_promotions(conn), by_id["PLAN_BASIC"], expected, 45,
-                                 simulator.AS_OF)
-    assert simulator._best(options, by_id)["plan_id"] == "PLAN_BASIC"
+                                 simulator.AS_OF, bonus=bonus)
+    assert simulator._best(options, by_id)["plan_id"] == "PLAN_BASIC"  # 베이직 48,000 < 프로 80,000
 
 
 def test_gift_shop_keeps_plan(sims):
     rec = sims["user_202"]["recommendation"]
     assert (rec["action"], rec["plan_id"], rec["promo_id"]) == ("keep_with_promotion", "PLAN_BASIC", "PROMO_BASIC_LOYAL")
-    assert (rec["current_total_12m"], rec["recommended_total_12m"]) == (538000, 518000)
+    assert (rec["current_total_12m"], rec["recommended_total_12m"]) == (522000, 502000)
     pro = next(o for o in sims["user_202"]["options"] if o["plan_id"] == "PLAN_PRO")
     assert pro["total_12m"] == 888000
 
@@ -214,10 +234,10 @@ def test_gift_shop_keeps_plan(sims):
 def test_upcoming_peak_and_extra_cost(sims):
     up = sims["user_201"]["seasonality"]["upcoming"]
     assert up == {"label": "1~3월", "months": ["2027-01", "2027-02", "2027-03"], "deadline": "2026-12-31",
-                  "current_bill": 855000, "recommended_bill": 462000, "usual_month": 50000, "extra_cost": 705000}
+                  "current_bill": 838500, "recommended_bill": 430500, "usual_month": 48000, "extra_cost": 694500}
     shop = sims["user_202"]["seasonality"]["upcoming"]
-    # 1~2월: 110,000×2 = 220,000, 평소 30,000 → 추가 160,000
-    assert (shop["label"], shop["deadline"], shop["current_bill"], shop["extra_cost"]) == ("1~2월", "2026-12-31", 220000, 160000)
+    # 1~2월: 108,000×2 = 216,000, 평소 30,000 → 추가 156,000
+    assert (shop["label"], shop["deadline"], shop["current_bill"], shop["extra_cost"]) == ("1~2월", "2026-12-31", 216000, 156000)
 
 
 def test_growth_is_clamped():
@@ -243,8 +263,8 @@ def test_review_has_upcoming_peak_section(conn):
     data = documents.build_data(conn, "user_201")
     season = data["season"]
     assert season["peak_label"] == "1~3월, 5월" and season["deadline"] == "2026-12-31"
-    assert season["current"] == {"supply": 855000, "tax": 85500, "total": 940500}
-    assert season["recommended"] == {"supply": 462000, "tax": 46200, "total": 508200}
+    assert season["current"] == {"supply": 838500, "tax": 83850, "total": 922350}
+    assert season["recommended"] == {"supply": 430500, "tax": 43050, "total": 473550}
     assert "계절 반영" in data["basis"][1] and "API 1.00배" in data["basis"][1]
     assert documents.build_data(conn, "user_203")["season"] is None
     assert documents.build_data(conn, "user_002")["season"] is None
@@ -261,11 +281,11 @@ def test_upcoming_peak_in_every_format(conn, tmp_path):
     pdf = " ".join(p.extract_text() for p in PdfReader(io.BytesIO(files["pdf"])).pages)
     docx = Document(io.BytesIO(files["docx"]))
     cells = " ".join(c.text for t in docx.tables for row in t.rows for c in row.cells)
-    for amount in ("855,000", "85,500", "940,500", "462,000", "508,200"):
+    for amount in ("838,500", "83,850", "922,350", "430,500", "473,550"):
         assert amount in pdf and amount in cells
     wb = load_workbook(io.BytesIO(files["xlsx"]))
     summary = list(wb["요약"].iter_rows(values_only=True))
-    assert ("현재 요금제 유지(베이직)", 855000, 85500, 940500) in [tuple(r[:4]) for r in summary]
+    assert ("현재 요금제 유지(베이직)", 838500, 83850, 922350) in [tuple(r[:4]) for r in summary]
     forecast_rows = [r for r in wb["근거"].iter_rows(values_only=True) if r and r[0] == "2027-01"]
     assert forecast_rows == [("2027-01", 110000, 160, "2026-01")]
     basis = list(wb["근거"].iter_rows(values_only=True))
@@ -283,14 +303,16 @@ def test_seasonal_captions(conn):
     assert caps["usage"][0] == "1~3월은 2년 연속 평소보다 많이 썼습니다(2025-01 평소의 5.0배, 2026-01 5.5배)."
     assert "성장률(API 1.00배, 스토리지 1.00배)" in caps["usage"][2]
     assert caps["usage"][3] == "가장 많이 쓸 것으로 예상되는 달은 2027-01입니다(API 호출 110,000회, 스토리지 160GB)."
-    assert "API 호출은 100,000회 초과, 스토리지는 110GB 초과입니다." in caps["usage"][4]
-    assert "API 호출은 60,000회 초과, 스토리지는 제공량 이내입니다." in caps["usage"][5]
+    # 3단계 제공량: 베이직 11,500회·57GB, 프로 57,500회·230GB
+    assert "API 호출은 98,500회 초과, 스토리지는 103GB 초과입니다." in caps["usage"][4]
+    assert "API 호출은 52,500회 초과, 스토리지는 제공량 이내입니다." in caps["usage"][5]
+    assert caps["usage"][6] == "기본 제공량에는 장기 이용 혜택 3단계(15% 추가)가 반영되어 있습니다." 
     assert caps["cumulative"][-1] == "성수기(1~3월, 5월)에는 지금 요금제의 선이 가파르게 올라가 간격이 크게 벌어집니다."
-    assert caps["composition"][-1] == "예상 사용량 기준으로 API 초과 요금 2027-01~2027-03·2027-05 월 90,000원이 포함됩니다."
+    assert caps["composition"][-1] == "예상 사용량 기준으로 API 초과 요금 2027-01~2027-03·2027-05 월 79,500원이 포함됩니다."
     shop = documents.build_data(conn, "user_202")["captions"]
     # 같은 요금제를 유지하므로 두 선이 함께 오른다(간격이 벌어진다고 쓰면 틀림)
     assert shop["cumulative"][-1] == "성수기(1~2월)에는 두 선 모두 가파르게 올라갑니다."
-    assert "이벤트(베이직 2년 이상 고객 2개월 1만 원 할인)를 신청하면 518,000원" in shop["cumulative"][0]
+    assert "이벤트(베이직 2년 이상 고객 2개월 1만 원 할인)를 신청하면 502,000원" in shop["cumulative"][0]
 
 
 def test_usage_chart_shows_24_months(conn):

@@ -43,6 +43,14 @@ class Promotion:
     upgrade_only: bool
 
 
+@dataclass(frozen=True)
+class LoyaltyTier:
+    tier: int
+    tier_name: str
+    min_tenure_months: int
+    bonus_pct: int
+
+
 def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
     """읽기 전용 연결. 쓰기 쿼리는 SQLite가 거부한다."""
     if not db_path.exists():
@@ -60,6 +68,12 @@ def load_plans(conn: sqlite3.Connection) -> list[Plan]:
 def load_promotions(conn: sqlite3.Connection) -> list[Promotion]:
     rows = conn.execute("SELECT * FROM promotions ORDER BY promo_id").fetchall()
     return [Promotion(**{**dict(row), "upgrade_only": bool(row["upgrade_only"])}) for row in rows]
+
+
+def load_loyalty_tiers(conn: sqlite3.Connection) -> list[LoyaltyTier]:
+    """장기 이용 혜택 단계(LOY-02). 낮은 단계부터. 단계 기준과 비율은 코드가 아니라 이 표가 정한다."""
+    rows = conn.execute("SELECT * FROM loyalty_tiers ORDER BY min_tenure_months").fetchall()
+    return [LoyaltyTier(**dict(row)) for row in rows]
 
 
 def load_customer(conn: sqlite3.Connection, user_id: str) -> dict:

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import math
 import sqlite3
@@ -41,6 +42,7 @@ connect = data_access.connect
 load_plans = data_access.load_plans
 load_promotions = data_access.load_promotions
 load_customer = data_access.load_customer
+load_loyalty_tiers = data_access.load_loyalty_tiers
 
 
 def load_usage(conn: sqlite3.Connection, user_id: str, as_of: date | None = None) -> list[dict]:
@@ -81,6 +83,53 @@ def tenure_months(signup_date: str, as_of: date) -> int:
     signup = date.fromisoformat(signup_date)
     months = (as_of.year - signup.year) * 12 + as_of.month - signup.month
     return months - (1 if as_of.day < signup.day else 0)
+
+
+def tier_for(tenure: int, tiers):
+    """가입 기간(꽉 찬 개월 수)에 맞는 장기 이용 혜택 단계. 없으면 None(LOY-01)."""
+    reached = [tier for tier in tiers if tenure >= tier.min_tenure_months]
+    return max(reached, key=lambda tier: tier.min_tenure_months) if reached else None
+
+
+def with_bonus(plan: Plan, bonus_pct: int) -> Plan:
+    """기본 제공량을 bonus_pct만큼 늘린 요금제. 늘린 양은 내림해 정수(API 호출 수, GB)로 쓴다(명세 2장)."""
+    if not bonus_pct:
+        return plan
+    extra_api = plan.included_api_calls * bonus_pct // 100
+    extra_gb = int(Fraction(str(plan.included_storage_gb)) * bonus_pct // 100)
+    return dataclasses.replace(plan, included_api_calls=plan.included_api_calls + extra_api,
+                               included_storage_gb=plan.included_storage_gb + extra_gb)
+
+
+def loyalty(tenure: int, tiers, as_of: date, horizon: int = HORIZON_MONTHS) -> dict:
+    """장기 이용 혜택(LOY-01): 현재 단계, 다음 단계와 도달 월, 비교 기간 달마다의 추가 비율.
+
+    비교 기간 i번째 달(0부터)의 1일에는 가입 기간이 tenure + i + 1개월이다(기준일은 달의 첫날, SIM-09).
+    그래서 다음 단계는 기준일에서 (필요 개월 - tenure)개월 뒤의 달부터 적용된다.
+    """
+    now = tier_for(tenure, tiers)
+    higher = [tier for tier in tiers if tier.min_tenure_months > tenure]
+    nxt = min(higher, key=lambda tier: tier.min_tenure_months) if higher else None
+    by_month = []
+    for index in range(horizon):
+        tier = tier_for(tenure + index + 1, tiers)
+        by_month.append(tier.bonus_pct if tier else 0)
+    out = {
+        "tenure_months": tenure,
+        "tier": now.tier if now else 0,
+        "tier_name": now.tier_name if now else None,
+        "bonus_pct": now.bonus_pct if now else 0,
+        "is_top": now is not None and nxt is None,
+        "next": None,
+        "monthly_bonus_pct": by_month,
+    }
+    if nxt is not None:
+        in_months = nxt.min_tenure_months - tenure
+        out["next"] = {"tier": nxt.tier, "tier_name": nxt.tier_name, "bonus_pct": nxt.bonus_pct,
+                       "min_tenure_months": nxt.min_tenure_months, "in_months": in_months,
+                       "month": _shift(f"{as_of.year}-{as_of.month:02d}", in_months),
+                       "in_horizon": in_months <= horizon}
+    return out
 
 
 def monthly_discount(promo: Promotion, plan: Plan) -> int:
@@ -209,16 +258,22 @@ def seasonal_usage(usage: list[dict], as_of: date, months: list[str]) -> tuple[l
 
 
 def _compare(plans, promotions, current: Plan, expected: dict, tenure: int, as_of: date,
-             monthly_usage: list[dict] | None = None) -> list[dict]:
+             monthly_usage: list[dict] | None = None, bonus: dict | None = None) -> list[dict]:
     """예상 사용량으로 요금제마다 월 청구액, 받을 수 있는 가장 큰 이벤트, 12개월 총액을 계산한다.
 
     monthly_usage(계절 반영 예측)가 있으면 달마다 다른 사용량으로, 없으면 3개월 평균으로 12개월을 계산한다.
+    bonus(장기 이용 혜택, loyalty()의 결과)가 있으면 모든 요금제의 기본 제공량을 그 단계만큼 늘린다(LOY-01).
+    혜택은 고객에게 붙으므로 요금제를 바꿔도 같은 단계를 쓴다.
     """
     options = []
     usages = monthly_usage or [expected] * HORIZON_MONTHS
+    now_pct = bonus["bonus_pct"] if bonus else 0
+    month_pcts = bonus["monthly_bonus_pct"] if bonus else [0] * len(usages)
     for plan in plans:
-        cost = monthly_cost(plan, expected["api_calls"], expected["storage_gb"])
-        months_cost = [monthly_cost(plan, u["api_calls"], u["storage_gb"]) for u in usages]
+        effective = with_bonus(plan, now_pct)
+        cost = monthly_cost(effective, expected["api_calls"], expected["storage_gb"])
+        months_cost = [monthly_cost(with_bonus(plan, pct), u["api_calls"], u["storage_gb"])
+                       for u, pct in zip(usages, month_pcts)]
         regular_total = sum(c["total"] for c in months_cost)
         best_promo, best_discount, skipped = None, 0, []
         for promo in promotions:
@@ -235,8 +290,9 @@ def _compare(plans, promotions, current: Plan, expected: dict, tenure: int, as_o
             "plan_id": plan.plan_id,
             "plan_name": plan.plan_name,
             "is_current": plan.plan_id == current.plan_id,
-            "included_api_calls": plan.included_api_calls,  # 리포트 자리표시자용 기본 제공량(T4)
-            "included_storage_gb": plan.included_storage_gb,
+            # 지금 받는 기본 제공량(장기 혜택 포함). 리포트 자리표시자와 서류가 쓴다(T4, LOY-05).
+            "included_api_calls": effective.included_api_calls,
+            "included_storage_gb": effective.included_storage_gb,
             "monthly": cost,  # 최근 3개월 평균 사용량 기준 월 청구액
             "months_cost": months_cost,  # 비교 기간 달마다의 청구액(할인 전)
             "promotion": None if best_promo is None else {
@@ -280,7 +336,8 @@ def monthly_schedule(option: dict, months: list[str], with_promotion: bool = Tru
 
 
 def stability(plans, promotions, current: Plan, expected: dict, tenure: int, as_of: date,
-              recommended: dict, change_pct: int = STABILITY_CHANGE_PCT, monthly_usage: list[dict] | None = None) -> dict:
+              recommended: dict, change_pct: int = STABILITY_CHANGE_PCT, monthly_usage: list[dict] | None = None,
+              bonus: dict | None = None) -> dict:
     """추천 안정성(SIM-04). 예상 사용량을 함께 줄이거나 늘려 다시 비교한다. 추천 자체는 바꾸지 않는다."""
     by_id = {plan.plan_id: plan for plan in plans}
     key = (recommended["plan_id"], recommended["promotion"]["promo_id"] if recommended["promotion"] else None)
@@ -290,7 +347,7 @@ def stability(plans, promotions, current: Plan, expected: dict, tenure: int, as_
             return {**u, "api_calls": round(u["api_calls"] * factor), "storage_gb": round(u["storage_gb"] * factor, 1)}
 
         scaled_months = [scale(u) for u in monthly_usage] if monthly_usage else None
-        best = _best(_compare(plans, promotions, current, scale(expected), tenure, as_of, scaled_months), by_id)
+        best = _best(_compare(plans, promotions, current, scale(expected), tenure, as_of, scaled_months, bonus), by_id)
         cases[name] = {"plan_id": best["plan_id"], "plan_name": best["plan_name"],
                        "promo_id": best["promotion"]["promo_id"] if best["promotion"] else None}
     down = (cases["if_down"]["plan_id"], cases["if_down"]["promo_id"]) != key
@@ -326,12 +383,14 @@ def simulate(conn: sqlite3.Connection, user_id: str, as_of: date | None = None) 
         "seasonality": season,
         "horizon_months": HORIZON_MONTHS,  # 비교 기간. 리포트의 {horizon_months}는 이 값으로 채운다(SIM-01 v3.4)
     }
+    tenure = tenure_months(customer["signup_date"], as_of)
+    bonus = loyalty(tenure, load_loyalty_tiers(conn), as_of)
+    result["loyalty"] = bonus
     if expected is None:
         return {**result, "status": "no_usage", "options": [], "recommendation": None}
 
-    tenure = tenure_months(customer["signup_date"], as_of)
     promotions = load_promotions(conn)
-    options = _compare(plans, promotions, current, expected, tenure, as_of, monthly_usage)
+    options = _compare(plans, promotions, current, expected, tenure, as_of, monthly_usage, bonus)
     best = _best(options, by_id)
     current_option = next(o for o in options if o["is_current"])
     # 비교 기준은 "아무것도 바꾸지 않을 때", 곧 현재 요금제를 이벤트 없이 12개월 쓰는 금액이다.
@@ -350,8 +409,7 @@ def simulate(conn: sqlite3.Connection, user_id: str, as_of: date | None = None) 
         "monthly_saving": ((baseline_12m - best_regular_12m) * 2 + HORIZON_MONTHS) // (2 * HORIZON_MONTHS),
         "saving_12m": baseline_12m - best["total_12m"],
         # 리포트가 비율을 직접 계산하지 않도록 여기서 정수 %로 준다.
-        # 반올림은 0.5를 올린다(파이썬 round()는 짝수 쪽으로 보내서 52.5가 52가 된다). 절감액은 0 이상이다.
-        "saving_pct": ((baseline_12m - best["total_12m"]) * 200 + baseline_12m) // (2 * baseline_12m),
+        "saving_pct": saving_percent(baseline_12m - best["total_12m"], baseline_12m),
         "current_total_12m": baseline_12m,
         "recommended_total_12m": best["total_12m"],
         "low_data": expected["months_used"] < FORECAST_MONTHS,
@@ -366,8 +424,13 @@ def simulate(conn: sqlite3.Connection, user_id: str, as_of: date | None = None) 
         season["upcoming"] = upcoming_peak(season, schedule)
     return {**result, "status": "ok", "tenure_months": tenure, "options": options, "recommendation": recommendation,
             "stability": stability(plans, promotions, current, expected, tenure, as_of, best,
-                                   monthly_usage=monthly_usage),
+                                   monthly_usage=monthly_usage, bonus=bonus),
             "schedule": schedule}
+
+
+def saving_percent(saving: int, baseline: int) -> int:
+    """절감률(정수 %). 0.5는 올린다(파이썬 round()는 짝수 쪽으로 보내서 52.5가 52가 된다). 절감액은 0 이상이다."""
+    return (saving * 200 + baseline) // (2 * baseline)
 
 
 def upcoming_peak(season: dict, schedule: dict) -> dict | None:

@@ -1,8 +1,9 @@
 """셀프 요금제 변경 검증(CHG-01~07).
 
 기대 금액은 손으로 계산한 값이다(test_documents.py 머리말과 같은 계산).
-- user_002: 베이직 유지 월 129,000원(세액 12,900원, 합계 141,900원).
-  프로 + 3개월 30% 할인: 2026-12~2027-02 월 56,000원, 2027-03~2027-11 월 80,000원. 12개월 절감 660,000원.
+- user_002(가입 19개월, 장기 혜택 2단계 → 2027-04부터 3단계): 베이직 유지 월 124,500원(세액 12,450원, 합계 136,950원),
+  2027-04부터 123,500원. 프로 + 3개월 30% 할인: 2026-12~2027-02 월 56,000원, 2027-03~2027-11 월 80,000원.
+  12개월 절감 598,000원(세액 148,600 − 88,800 = 59,800원, 합계 657,800원).
 - 적용일은 비교 기간 첫 달 1일(2026-12-01), 취소 기한은 그 전날(2026-11-30).
 """
 
@@ -62,13 +63,13 @@ def test_quote_for_user_002_matches_hand_calculation(conn):
     assert (q["action"], q["from_plan"]["name"], q["to_plan"]["name"]) == ("upgrade", "베이직", "프로")
     assert q["promotion"]["name"] == "프로 전환 3개월 30% 할인"
     assert (q["effective_date"], q["cancel_deadline"]) == ("2026-12-01", "2026-11-30")
-    assert q["current_monthly"] == {"supply": 129000, "tax": 12900, "total": 141900}
+    assert q["current_monthly"] == {"supply": 124500, "tax": 12450, "total": 136950}
     assert q["monthly"] == [
         {"first": "2026-12", "last": "2027-02", "supply": 56000, "tax": 5600, "total": 61600},
         {"first": "2027-03", "last": "2027-11", "supply": 80000, "tax": 8000, "total": 88000},
     ]
     assert q["after_promotion"] == {"supply": 80000, "tax": 8000, "total": 88000}
-    assert q["saving_12m"] == {"supply": 660000, "tax": 66000, "total": 726000}
+    assert q["saving_12m"] == {"supply": 598000, "tax": 59800, "total": 657800}
     assert len(q["invoice_checks"]) == 2
     assert q["changeable"] and not q["needs_reconfirm"]
 
@@ -106,14 +107,14 @@ def test_stale_analysis_cannot_be_used(conn):
 # --- 알림과 대조(CHG-02, 07) ---
 
 def test_notification_still_valid(conn):
-    notice = {"plan_id": "PLAN_PRO", "promo_id": "PROMO_PRO_UPGRADE", "saving_12m": 660000, "valid_until": "2026-12-01"}
+    notice = {"plan_id": "PLAN_PRO", "promo_id": "PROMO_PRO_UPGRADE", "saving_12m": 598000, "valid_until": "2026-12-01"}
     q = change.prepare(conn, "user_002", TODAY, notice)
     assert q["notification_check"]["status"] == "유효"
     assert not q["needs_reconfirm"]
 
 
 def test_expired_notification_needs_reconfirm(conn):
-    notice = {"plan_id": "PLAN_PRO", "promo_id": "PROMO_PRO_UPGRADE", "saving_12m": 660000, "valid_until": "2026-11-06"}
+    notice = {"plan_id": "PLAN_PRO", "promo_id": "PROMO_PRO_UPGRADE", "saving_12m": 598000, "valid_until": "2026-11-06"}
     q = change.prepare(conn, "user_002", TODAY, notice)
     assert q["notification_check"]["status"] == "만료"
     assert q["needs_reconfirm"]
@@ -146,15 +147,15 @@ def test_submit_records_request_history_audit_and_message(conn, paths):
     assert not result["duplicate"]
     assert (req["from_plan"], req["to_plan"], req["promo_id"]) == ("PLAN_BASIC", "PLAN_PRO", "PROMO_PRO_UPGRADE")
     assert (req["effective_date"], req["cancel_deadline"], req["status"]) == ("2026-12-01", "2026-11-30", "접수")
-    assert req["recalculated_saving_12m"] == 660000
+    assert req["recalculated_saving_12m"] == 598000
     assert rows(paths, "SELECT outcome, saving_12m FROM recommendation_history WHERE run_id = ?",
-                "self-CR-20261107-ABC123") == [("셀프 수락", 660000)]
+                "self-CR-20261107-ABC123") == [("셀프 수락", 598000)]
     raw = paths["audit_path"].read_text(encoding="utf-8")
     name = documents._identity(conn, "user_002")["name"]
     assert "change_requested" in raw and name not in raw and "user_002" not in raw
     message = result["sales_message"]["text"]
     assert req["code"] in message and name not in message and "user_002" not in message
-    assert "660,000원" in message
+    assert "598,000원" in message
 
 
 def test_request_id_has_no_sequence_number(conn, paths):
@@ -190,7 +191,7 @@ def test_simultaneous_insert_is_blocked_by_index(conn, paths, monkeypatch):
 def test_tampered_quote_is_rejected(conn, paths):
     with pytest.raises(change.QuoteChanged) as caught:
         change.submit(conn, "user_002", ADMIN, "0" * 64, True, TODAY, **paths)
-    assert caught.value.fresh["saving_12m"]["supply"] == 660000
+    assert caught.value.fresh["saving_12m"]["supply"] == 598000
 
 
 @pytest.fixture()

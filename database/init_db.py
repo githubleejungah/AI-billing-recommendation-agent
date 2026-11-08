@@ -7,6 +7,7 @@
   남는 고객 10%(베이직은 남을 수 없고 엔터프라이즈는 넘칠 수 없어 맞는 쪽으로 돌린다).
 - user_201~203: (명세 v3.2) 성수기 시나리오 고객. 24개월 기록(2024-11~2026-10)을 표로 고정했다.
   기존 고객 200명의 데이터와 가칭 코드가 바뀌지 않도록 맨 뒤에 붙인다(무작위 값을 쓰지 않는다).
+- loyalty_tiers: (명세 v3.5) 장기 이용 혜택 단계(가입 6개월·1년·2년, 기본 제공량 5%·10%·15% 추가).
 - customer_codes: Slack 등 사내 공유용 고정 가칭 코드(SEC-12). 사용 데이터와 다른 시드로 만든다.
 모든 이름과 수치는 가상이다.
 """
@@ -62,6 +63,12 @@ CREATE TABLE customer_codes (
     user_id TEXT PRIMARY KEY REFERENCES users (user_id),
     code TEXT NOT NULL UNIQUE
 );
+CREATE TABLE loyalty_tiers (
+    tier INTEGER PRIMARY KEY,
+    tier_name TEXT NOT NULL,
+    min_tenure_months INTEGER NOT NULL UNIQUE,
+    bonus_pct INTEGER NOT NULL CHECK (bonus_pct > 0)
+);
 """
 
 # 기본 요금과 기본 제공량은 처음 구상 그대로다. 초과 단가는 명세 v2.4(2026-11-07)에서 낮췄다.
@@ -79,13 +86,23 @@ PROMOTIONS = [
     ("PROMO_PRO_SUMMER", "여름 프로 50% 할인(종료)", "PLAN_PRO", "percent", 50, 3, "2026-06-01", "2026-08-31", 0, 0),
 ]
 
+# (명세 v3.5) 장기 이용 혜택(LOY-01, 02, 결정 42). 가입 기간이 기준 이상이면 모든 요금제의 기본 제공량을
+# bonus_pct만큼 늘린다(늘린 양은 내림). 이벤트와 따로 계산하므로 함께 받을 수 있다(LOY-03).
+# (단계, 이름, 필요한 가입 개월 수, 기본 제공량 추가 %)
+LOYALTY_TIERS = [
+    (1, "1단계", 6, 5),
+    (2, "2단계", 12, 10),
+    (3, "3단계", 24, 15),
+]
+
 # (user_id, 이름, 요금제, 가입일, 최근 3개월 평균 API 호출, 평균 스토리지 GB, 기록 개월 수, 메모)
 SCENARIOS = [
     ("user_001", "(주)알파컴퍼니", "PLAN_BASIC", "2025-01-15", 8500, 30, 6, "제공량 안 → 유지"),
     ("user_002", "(주)베타소프트", "PLAN_BASIC", "2025-03-20", 42000, 120, 6, "베이직 초과 폭탄 → 프로 + 전환 할인"),
     ("user_003", "(주)감마테크", "PLAN_PRO", "2024-11-10", 45000, 150, 6, "프로 제공량 안 → 유지"),
-    ("user_004", "(주)델타랩", "PLAN_BASIC", "2026-08-01", 33000, 40, 3, "가입 3개월이라 전환 할인 대상 아님 → 유지"),
-    ("user_005", "(주)엡실론", "PLAN_BASIC", "2025-01-01", 33000, 40, 6, "전환 할인을 받으면 프로가 더 쌈(장기 할인 대상은 아님)"),
+    # (T3d) 장기 이용 혜택으로 제공량이 늘어 33,000회에서는 베이직과 프로+할인이 같아져, 34,000회로 올렸다.
+    ("user_004", "(주)델타랩", "PLAN_BASIC", "2026-08-01", 34000, 40, 3, "가입 3개월이라 전환 할인 대상 아님 → 유지"),
+    ("user_005", "(주)엡실론", "PLAN_BASIC", "2025-01-01", 34000, 40, 6, "전환 할인을 받으면 프로가 더 쌈(장기 할인 대상은 아님)"),
     ("user_006", "(주)제타웍스", "PLAN_PRO", "2025-02-01", 6000, 20, 6, "적게 씀 → 베이직 하향"),
     ("user_007", "(주)에타시스템", "PLAN_ENTERPRISE", "2024-01-10", 60000, 150, 6, "엔터프라이즈 과잉 → 프로 하향"),
     ("user_008", "(주)세타데이터", "PLAN_PRO", "2023-06-01", 120000, 400, 6, "프로 초과 → 엔터프라이즈 + 전환 할인"),
@@ -96,11 +113,14 @@ SCENARIOS = [
     ("user_013", "(주)뉴스타트", "PLAN_BASIC", "2026-10-01", 40000, 40, 1, "기록 1개월 → 프로(데이터 적음 안내)"),
     ("user_014", "(주)크사이", "PLAN_BASIC", "2024-01-01", 9000, 45, 6, "유지 + 장기 고객 할인"),
     ("user_015", "(주)오미크론", "PLAN_ENTERPRISE", "2023-03-01", 150000, 800, 6, "유지, 활동 급감(이탈 위험)"),
-    ("user_016", "(주)파이", "PLAN_PRO", "2025-05-01", 50000, 200, 6, "제공량과 정확히 같음 → 초과 없음"),
-    ("user_017", "(주)로", "PLAN_BASIC", "2025-07-01", 10001, 30, 6, "1회 초과도 1,000회 단위로 올림"),
+    # (T3d) user_016·017은 장기 혜택 2단계(10%)로 늘어난 지금 제공량에 맞춰 경계값을 옮겼다.
+    ("user_016", "(주)파이", "PLAN_PRO", "2025-05-01", 55000, 220, 6, "제공량과 정확히 같음 → 초과 없음"),
+    ("user_017", "(주)로", "PLAN_BASIC", "2025-07-01", 11001, 30, 6, "1회 초과도 1,000회 단위로 올림"),
     ("user_018", "(주)시그마", "PLAN_BASIC", "2025-09-01", 17000, 40, 6, "종료된 이벤트는 무시 → 유지"),
-    ("user_019", "(주)타우", "PLAN_BASIC", "2026-07-01", 35000, 40, 6, "베이직과 프로 금액 같음 → 현재 유지"),
-    ("user_020", "(주)입실론", "PLAN_PRO", "2024-08-01", 95000, 350, 6, "프로 초과 → 엔터프라이즈 + 전환 할인"),
+    # (T3d) 비교 기간 중 혜택 단계가 바뀌어도 12개월 총액이 같도록 가입 3개월(전환 할인 없음)·33,000회·61.5GB로 바꿨다.
+    ("user_019", "(주)타우", "PLAN_BASIC", "2026-08-01", 33000, 61.5, 6, "베이직과 프로 12개월 금액 같음 → 현재 유지"),
+    # (T3d) 장기 이용 혜택 3단계로 프로 제공량이 늘어 95,000회·350GB에서는 프로 유지가 맞게 되어 올렸다.
+    ("user_020", "(주)입실론", "PLAN_PRO", "2024-08-01", 100000, 380, 6, "프로 초과 → 엔터프라이즈 + 전환 할인"),
 ]
 
 # (명세 v3.2) 성수기 시나리오. 기본값과 달마다 다른 값(월: (API 호출, 스토리지 GB))을 적는다.
@@ -246,6 +266,7 @@ def build(db_path: Path = DB_PATH) -> dict:
         conn.executescript(SCHEMA)
         conn.executemany("INSERT INTO plans VALUES (?, ?, ?, ?, ?, ?, ?)", PLANS)
         conn.executemany("INSERT INTO promotions VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", PROMOTIONS)
+        conn.executemany("INSERT INTO loyalty_tiers VALUES (?, ?, ?, ?)", LOYALTY_TIERS)
         conn.executemany("INSERT INTO users VALUES (?, ?, ?, ?)", users)
         conn.executemany("INSERT INTO customer_codes VALUES (?, ?)", codes)
         conn.executemany(
@@ -254,7 +275,7 @@ def build(db_path: Path = DB_PATH) -> dict:
             logs,
         )
     conn.close()
-    return {"plans": len(PLANS), "promotions": len(PROMOTIONS), "users": len(users), "usage_logs": len(logs),
+    return {"plans": len(PLANS), "promotions": len(PROMOTIONS), "loyalty_tiers": len(LOYALTY_TIERS), "users": len(users), "usage_logs": len(logs),
             "customer_codes": len(codes)}
 
 

@@ -4,7 +4,8 @@
 #
 # source        시뮬레이터 결과를 정리한 사실 목록(report.facts)의 이름
 # format        won(원) / count(회) / gb / months(개월) / percent / date / discount(% 또는 원) / text
-# required_when always / promotion(추천에 이벤트가 있을 때) / saving(12개월 절감액이 0보다 클 때) / never
+# required_when always / promotion(추천에 이벤트가 있을 때) / saving(12개월 절감액이 0보다 클 때)
+#               / churn(이탈 위험 고객이고 값이 있을 때. "응대 안내" 구역에 써야 함, REP-06) / never
 # local_only    true면 고객 데이터가 들어 있어 Claude에는 키 이름만 보내고 값은 PC 안에서만 채운다(SEC-07)
 
 # 근거 사용량: 둘 중 하나 이상은 반드시 써야 한다(REP-01).
@@ -210,6 +211,28 @@ source = "peak.bill_current"
 format = "won"
 required_when = "never"
 description = "다음 성수기 기간 예상 청구액(현재 요금제 유지)"
+
+# (v3.5) 장기 이용 혜택(REP-06, LOY-01). 가입 기간에서 나온 값이라 PC 안에서만 채운다.
+[keys.loyalty_tier]
+source = "loyalty.tier_text"
+format = "text"
+required_when = "churn"
+local_only = true
+description = "장기 이용 혜택 현재 단계(최고 단계면 그 사실도 들어감)"
+
+[keys.loyalty_next_months]
+source = "loyalty.next_in_months"
+format = "months"
+required_when = "churn"
+local_only = true
+description = "다음 혜택 단계까지 남은 기간(최고 단계 고객은 값 없음)"
+
+[keys.loyalty_next_tier]
+source = "loyalty.next_text"
+format = "text"
+required_when = "never"
+local_only = true
+description = "다음 혜택 단계(최고 단계 고객은 값 없음)"
 
 [keys.peak_evidence]
 source = "peak.evidence"

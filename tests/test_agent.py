@@ -128,7 +128,7 @@ def test_happy_path_produces_report_slack_history_and_log(conn, pol, paths):
 
     report_text = result.report_path.read_text(encoding="utf-8")
     assert report_text.startswith("# 요금제 추천 리포트: (주)베타소프트 (UQM-9GU)")
-    assert "129,000원" in report_text and "660,000원" in report_text  # 코드가 채운 값
+    assert "124,500원" in report_text and "598,000원" in report_text  # 코드가 채운 값(T3d 장기 혜택 반영)
     assert not re.search(r"(?<![A-Za-z0-9])C1(?!\d)", report_text)  # 별칭은 이름으로 바뀜
 
     slack = json.dumps(json.loads(result.slack_path.read_text(encoding="utf-8")), ensure_ascii=False)
@@ -137,7 +137,7 @@ def test_happy_path_produces_report_slack_history_and_log(conn, pol, paths):
     with history.connect(paths["app_db"]) as app:
         row = dict(app.execute("SELECT * FROM recommendation_history").fetchone())
     assert row["code"] == "UQM-9GU" and row["action"] == "upgrade" and row["plan_id"] == "PLAN_PRO"
-    assert row["saving_12m"] == 660000 and row["model_id"] == MODEL and row["outcome"] == "미기록"
+    assert row["saving_12m"] == 598000 and row["model_id"] == MODEL and row["outcome"] == "미기록"
 
     log = json.loads(result.run_log_path.read_text(encoding="utf-8"))
     assert [s["step"] for s in log["steps"]] == list(agent.STEPS)

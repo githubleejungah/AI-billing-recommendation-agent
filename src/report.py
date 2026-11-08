@@ -17,7 +17,7 @@ from pathlib import Path
 
 REGISTRY_PATH = Path(__file__).resolve().parent.parent / "config" / "placeholders.toml"
 FORMATS = {"won", "count", "gb", "months", "percent", "date", "discount", "text"}
-REQUIRED_WHEN = {"always", "promotion", "saving", "never"}
+REQUIRED_WHEN = {"always", "promotion", "saving", "churn", "never"}  # churn: 이탈 위험 고객의 응대 안내(REP-06)
 
 PLACEHOLDER = re.compile(r"\{([A-Za-z0-9_]+)\}")
 CITATION = re.compile(r"\[근거:\s*([a-z0-9_]+#\d+)\s*\]")
@@ -72,6 +72,27 @@ def _stability_sentence(sim: dict, by_id: dict) -> str:
     return " / ".join(parts)
 
 
+def _loyalty_facts(loy: dict | None) -> dict:
+    """장기 이용 혜택(REP-06). 문구 속 숫자는 모두 시뮬레이터 결과(단계, 비율, 필요 개월 수)에 있다."""
+    if not loy:
+        return {"loyalty.tier_text": None, "loyalty.next_in_months": None, "loyalty.next_text": None}
+    nxt = loy["next"]
+    if loy["tier"]:
+        tier_text = f"{loy['tier_name']}(기본 제공량 {loy['bonus_pct']}% 추가" + (", 최고 단계)" if loy["is_top"] else ")")
+    else:
+        tier_text = f"아직 없음(첫 단계는 가입 {nxt['min_tenure_months']}개월부터)" if nxt else "아직 없음"
+    return {
+        "loyalty.tier_text": tier_text,
+        "loyalty.next_in_months": nxt["in_months"] if nxt else None,
+        "loyalty.next_text": f"{nxt['tier_name']}(기본 제공량 {nxt['bonus_pct']}% 추가)" if nxt else None,
+    }
+
+
+def _is_churn_risk(sim: dict) -> bool:
+    activity = sim.get("activity")
+    return bool(activity and activity["churn_risk"])
+
+
 def facts(sim: dict) -> dict:
     """자리표시자의 source 이름 → 값. 값이 없으면 None."""
     out = {"current.plan_name": sim["current_plan_name"], "horizon_months": sim["horizon_months"]}
@@ -117,6 +138,7 @@ def facts(sim: dict) -> dict:
         "activity.change_pct": activity["change_pct"] if activity and activity["churn_risk"] else None,
         "stability.sentence": _stability_sentence(sim, by_id),
         "peak.months": None, "peak.deadline": None, "peak.bill_current": None, "peak.evidence": None,
+        **_loyalty_facts(sim.get("loyalty")),
     })
     if season.get("status") == "있음":
         labels = []
@@ -179,12 +201,21 @@ def required_keys(sim: dict, registry: dict) -> list[str]:
     if sim["status"] != "ok":
         return []
     rec = sim["recommendation"]
+    filled = values(sim, registry)
+    churn = _is_churn_risk(sim)
     keys = []
     for name, spec in registry["keys"].items():
         when = spec.get("required_when", "never")
         if when == "always" or (when == "promotion" and rec["promo_id"]) or (when == "saving" and rec["saving_12m"] > 0):
             keys.append(name)
+        elif when == "churn" and churn and filled[name] is not None:  # 최고 단계면 남은 개월 수는 없다(REP-06)
+            keys.append(name)
     return keys
+
+
+def churn_keys(sim: dict, registry: dict) -> list[str]:
+    """응대 안내 구역에 들어가야 하는 자리표시자(REP-06)."""
+    return [k for k in required_keys(sim, registry) if registry["keys"][k].get("required_when") == "churn"]
 
 
 def check_draft(draft: str, sim: dict, retrieved: dict[str, dict], registry: dict | None = None) -> list[str]:
@@ -223,6 +254,10 @@ def check_draft(draft: str, sim: dict, retrieved: dict[str, dict], registry: dic
     for name in required_keys(sim, registry):
         if name not in used:
             problems.append(f"필수 자리표시자 없음: {{{name}}}")
+    guide = "".join(body for title, body in _sections(draft) if SECTION_MATCH["응대 안내"](title))
+    for name in churn_keys(sim, registry):
+        if name in used and f"{{{name}}}" not in guide:
+            problems.append(f"이탈 위험 고객의 장기 이용 혜택은 '응대 안내' 구역에 써야 함(REP-06): {{{name}}}")
     for group in registry["required_any"]:
         if not any(name in used for name in group):
             problems.append("근거 사용량 자리표시자 없음: " + " 또는 ".join(f"{{{n}}}" for n in group))

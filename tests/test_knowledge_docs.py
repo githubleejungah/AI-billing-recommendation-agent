@@ -47,9 +47,9 @@ def db(tmp_path_factory):
     return plans, promos
 
 
-def test_thirteen_documents_with_metadata_and_sections():
+def test_fourteen_documents_with_metadata_and_sections():
     docs = documents()
-    assert len(docs) == 13
+    assert len(docs) == 14  # (v3.5) 장기 이용 혜택 문서 추가(LOY-04)
     for stem, (meta, body) in docs.items():
         assert meta["doc_id"] == stem
         assert meta["title"]

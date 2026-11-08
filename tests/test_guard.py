@@ -224,11 +224,17 @@ def test_cards_never_carry_identity_or_customer_numbers(conn, sims, pol, registr
         assert user_id not in card and not any(code in card for code in codes)
         assert not any(name in card for name in names)
         values = report.values(sim, registry)
+        # 공개된 고정 문구(자리표시자 설명, 이벤트 이름, 예측 방법 "3개월 평균")는 고객 값이 아니다.
+        # (T3d) 남은 개월 수 "2개월"·"12개월"이 이런 문구와 우연히 겹쳐서 빼고 본다.
+        variable = card.split("쓸 수 있는 자리표시자")[0]
+        for fixed in [p.promo_name for p in data_access.load_promotions(conn)] + ["3개월 평균"]:
+            variable = variable.replace(fixed, "")
         for key, spec in registry["keys"].items():
             if values[key] is None:
                 continue
             if spec.get("local_only") or spec["format"] in ("won", "date"):
-                assert values[key] not in card, (user_id, key)
+                # 앞이 숫자가 아닐 때만 같은 값으로 본다("12개월" 안의 "2개월"은 다른 값)
+                assert not re.search(r"(?<![\d.,])" + re.escape(values[key]), variable), (user_id, key)
         assert not re.search(r"현재 \d+개월", card)  # 가입 기간이 든 원래 이유 문구가 없음
 
 

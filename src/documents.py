@@ -84,6 +84,7 @@ def build_data(conn: sqlite3.Connection, user_id: str, kind: str = "review", cha
         raise DocumentError("이용 기록이 없어 서류를 만들 수 없습니다.")
     rec, sched = sim["recommendation"], sim["schedule"]
     plans = {p.plan_id: p for p in data_access.load_plans(conn)}
+    options = {o["plan_id"]: o for o in sim["options"]}
     current_plan = plans[sim["current_plan_id"]]
     promo = _promotion(conn, rec["promo_id"])
 
@@ -124,15 +125,18 @@ def build_data(conn: sqlite3.Connection, user_id: str, kind: str = "review", cha
         "forecast": _forecast(sim["forecast"]),
         "peak_months": sim["seasonality"]["peak_months"],
         "season": _season(sim, monthly),
-        "included": {"current": {"plan": current_plan.plan_name, "api_calls": current_plan.included_api_calls,
-                                 "storage_gb": current_plan.included_storage_gb},
-                     "recommended": {"plan": rec["plan_name"], "api_calls": plans[rec["plan_id"]].included_api_calls,
-                                     "storage_gb": plans[rec["plan_id"]].included_storage_gb}},
+        # 기본 제공량은 지금 받는 장기 이용 혜택을 반영한 시뮬레이터 값이다(LOY-05).
+        "included": {"current": {"plan": current_plan.plan_name, "api_calls": options[current_plan.plan_id]["included_api_calls"],
+                                 "storage_gb": options[current_plan.plan_id]["included_storage_gb"]},
+                     "recommended": {"plan": rec["plan_name"], "api_calls": options[rec["plan_id"]]["included_api_calls"],
+                                     "storage_gb": options[rec["plan_id"]]["included_storage_gb"]}},
+        "loyalty": _loyalty(sim["loyalty"]),
         "stability": sim["stability"]["status"],
         "stability_detail": _stability_detail(sim),
         "basis": [
             f"요금표 기준일: {sim['as_of']}",
             _forecast_basis(sim["forecast"]),
+            _loyalty_basis(sim["loyalty"]),
             f"비교 기간: {sched['months'][0]} ~ {sched['months'][-1]} (요금제 변경이 적용되는 다음 청구 주기부터 12개월)",
             f"추천 안정성: {sim['stability']['status']} (사용량 ±{sim['stability']['change_pct']}% 기준)",
         ],
@@ -161,6 +165,23 @@ def _forecast(f: dict) -> dict:
         out["monthly"] = [{"month": m["month"], "base_month": m["base_month"], "api_calls": m["api_calls"],
                            "storage_gb": m["storage_gb"]} for m in f["monthly"]]
     return out
+
+
+def _loyalty(loy: dict) -> dict:
+    """서류에 적는 장기 이용 혜택(LOY-05). 다음 단계는 비교 기간 안에 올 때만 넣는다(그래야 계산에 쓰인 값이다)."""
+    nxt = loy["next"]
+    return {"tier": loy["tier"], "tier_name": loy["tier_name"], "bonus_pct": loy["bonus_pct"], "is_top": loy["is_top"],
+            "next": None if not nxt or not nxt["in_horizon"] else
+            {"tier_name": nxt["tier_name"], "bonus_pct": nxt["bonus_pct"], "month": nxt["month"]}}
+
+
+def _loyalty_basis(loy: dict) -> str:
+    now = (f"{loy['tier_name']}(모든 요금제 기본 제공량 {loy['bonus_pct']}% 추가)" if loy["tier"]
+           else "아직 없음")
+    nxt = loy["next"]
+    if nxt and nxt["in_horizon"]:
+        now += f", {nxt['month']}부터 {nxt['tier_name']}({nxt['bonus_pct']}% 추가) 반영"
+    return f"장기 이용 혜택: {now}"
 
 
 def _forecast_basis(f: dict) -> str:

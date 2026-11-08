@@ -142,7 +142,21 @@ def _seasonal_usage(doc: dict) -> list[str]:
     if inc["recommended"]["plan"] != inc["current"]["plan"]:
         lines.append(f"추천 요금제({inc['recommended']['plan']}) 기본 제공량({_limits(inc['recommended'])})과 비교하면 "
                      + _against(peak, inc["recommended"]) + ".")
-    return lines + _stability_lines(doc, inc["recommended"]["plan"])
+    return lines + _loyalty_lines(doc) + _stability_lines(doc, inc["recommended"]["plan"])
+
+
+def _loyalty_lines(doc: dict) -> list[str]:
+    """장기 이용 혜택(LOY-05): 기본 제공량에 반영한 단계와 비교 기간 중 다음 단계."""
+    loy = doc.get("loyalty")
+    if not loy:
+        return []
+    lines = []
+    if loy["tier"]:
+        lines.append(f"기본 제공량에는 장기 이용 혜택 {loy['tier_name']}({loy['bonus_pct']}% 추가)가 반영되어 있습니다.")
+    if loy["next"]:
+        nxt = loy["next"]
+        lines.append(f"{nxt['month']}부터는 {nxt['tier_name']}({nxt['bonus_pct']}% 추가)가 적용되어 제공량이 더 늘어납니다.")
+    return lines
 
 
 def usage(doc: dict) -> list[str]:
@@ -160,7 +174,7 @@ def usage(doc: dict) -> list[str]:
     rec = inc["recommended"]
     if rec["plan"] != cur["plan"]:
         lines.append(f"추천 요금제({rec['plan']}) 기본 제공량({_limits(rec)})과 비교하면 " + _against(forecast, rec) + ".")
-    return lines + _stability_lines(doc, rec["plan"])
+    return lines + _loyalty_lines(doc) + _stability_lines(doc, rec["plan"])
 
 
 def all_captions(doc: dict) -> dict[str, list[str]]:

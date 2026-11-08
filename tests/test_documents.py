@@ -1,9 +1,11 @@
 """비용처리 서류와 그래프 검증(DOC-01~07, VIZ-01~03, SIM-06).
 
 기대 금액은 손으로 계산한 값이다.
-- user_002: 베이직 유지 월 129,000원 × 12 = 1,548,000원.
-  프로 + 3개월 30% 할인: 56,000원 × 3 + 80,000원 × 9 = 888,000원. 절감 660,000원(42.6% → 43%).
-- user_007: 엔터프라이즈 유지 200,000원 × 12 = 2,400,000원. 프로 1,140,000원. 절감 1,260,000원(52.5% → 53%).
+(T3d) 장기 이용 혜택을 반영해 다시 계산했다(계산식은 test_simulator.py).
+- user_002(2단계, 2027-04부터 3단계): 베이직 유지 124,500원 × 4 + 123,500원 × 8 = 1,486,000원(세액 148,600원).
+  프로 + 3개월 30% 할인: 56,000원 × 3 + 80,000원 × 9 = 888,000원. 절감 598,000원(40.2% → 40%).
+- user_007(3단계, 프로 제공 57,500회): 엔터프라이즈 유지 200,000원 × 12 = 2,400,000원. 프로 84,500원 × 12 = 1,014,000원.
+  절감 1,386,000원(57.75% → 58%). 0.5 올림(52.5% → 53%)은 test_simulator.py의 saving_percent 테스트에서 본다.
 - 세액은 달마다 공급가액의 10%(1원 미만 버림), 12개월 값은 월별 값의 합이다.
 """
 
@@ -72,10 +74,10 @@ def test_vat_is_ten_percent_rounded_down(supply, tax, total):
 def test_review_amounts_match_hand_calculation(conn):
     data = documents.build_data(conn, "user_002")
     baseline, recommended, saving = data["comparison"]
-    assert (baseline["supply"], baseline["tax"], baseline["total"]) == (1548000, 154800, 1702800)
+    assert (baseline["supply"], baseline["tax"], baseline["total"]) == (1486000, 148600, 1634600)
     assert (recommended["supply"], recommended["tax"], recommended["total"]) == (888000, 88800, 976800)
-    assert (saving["supply"], saving["tax"], saving["total"]) == (660000, 66000, 726000)
-    assert data["saving_pct"] == 43
+    assert (saving["supply"], saving["tax"], saving["total"]) == (598000, 59800, 657800)
+    assert data["saving_pct"] == 40
     assert [m["recommended"]["supply"] for m in data["monthly"]] == [56000] * 3 + [80000] * 9
     assert [m["discount"] for m in data["monthly"]] == [24000] * 3 + [0] * 9
     assert data["after_promotion_monthly"] == {"supply": 80000, "tax": 8000, "total": 88000}
@@ -84,8 +86,20 @@ def test_review_amounts_match_hand_calculation(conn):
 def test_review_without_promotion(conn):
     data = documents.build_data(conn, "user_007")
     assert data["promotion"] is None
-    assert [row["supply"] for row in data["comparison"]] == [2400000, 1140000, 1260000]
-    assert data["saving_pct"] == 53
+    assert [row["supply"] for row in data["comparison"]] == [2400000, 1014000, 1386000]
+    assert data["saving_pct"] == 58
+
+
+def test_review_states_loyalty_tier(conn):
+    # LOY-05: 서류에 적용한 단계와 늘어난 제공량을 적는다. 값은 시뮬레이터 값이다.
+    data = documents.build_data(conn, "user_002")
+    assert data["included"]["current"] == {"plan": "베이직", "api_calls": 11000, "storage_gb": 55}  # 2단계 10%
+    assert data["included"]["recommended"] == {"plan": "프로", "api_calls": 55000, "storage_gb": 220}
+    assert "장기 이용 혜택: 2단계(모든 요금제 기본 제공량 10% 추가), 2027-04부터 3단계(15% 추가) 반영" in data["basis"]
+    top = documents.build_data(conn, "user_015")  # 44개월, 최고 단계
+    assert "장기 이용 혜택: 3단계(모든 요금제 기본 제공량 15% 추가)" in top["basis"]
+    new = documents.build_data(conn, "user_004")  # 3개월, 6개월이 되는 2027-02부터 1단계
+    assert "장기 이용 혜택: 아직 없음, 2027-02부터 1단계(5% 추가) 반영" in new["basis"]
 
 
 def test_twelve_month_totals_are_sums_of_months(conn):
@@ -275,23 +289,28 @@ def test_korean_pdf_font_is_registered():
 def test_captions_for_user_002_match_hand_calculation(conn):
     caps = documents.build_data(conn, "user_002")["captions"]
     assert caps["cumulative"] == [
-        "지금 요금제(베이직)를 유지하면 12개월 동안 1,548,000원, 추천 요금제(프로)로 바꾸면 888,000원이 듭니다(부가세 별도).",
-        "두 선의 마지막 간격 660,000원(43%)이 12개월 절감액입니다.",
+        "지금 요금제(베이직)를 유지하면 12개월 동안 1,486,000원, 추천 요금제(프로)로 바꾸면 888,000원이 듭니다(부가세 별도).",
+        "두 선의 마지막 간격 598,000원(40%)이 12개월 절감액입니다.",
         "처음 3개월은 이벤트 할인이 더해져 간격이 더 빠르게 벌어집니다.",
     ]
     assert caps["composition"][0] == \
         "추천 요금제(프로)의 월 청구액(부가세 별도)은 2026-12~2027-02 56,000원, 2027-03~2027-11 80,000원입니다."
     assert caps["composition"][1] == "2026-12~2027-02에는 기본 요금 80,000원에서 24,000원이 할인됩니다."
-    # 예상 42,000회·120GB, 베이직 제공량 10,000회·50GB → 32,000회·70GB 초과
-    assert "API 호출은 32,000회 초과, 스토리지는 70GB 초과입니다." in caps["usage"][1]
+    # 예상 42,000회·120GB, 베이직 제공량(2단계) 11,000회·55GB → 31,000회·65GB 초과
+    assert "API 호출은 31,000회 초과, 스토리지는 65GB 초과입니다." in caps["usage"][1]
+    # LOY-05: 해설에 적용 단계와 비교 기간 중 다음 단계
+    assert caps["usage"][3:5] == [
+        "기본 제공량에는 장기 이용 혜택 2단계(10% 추가)가 반영되어 있습니다.",
+        "2027-04부터는 3단계(15% 추가)가 적용되어 제공량이 더 늘어납니다.",
+    ]
     assert caps["usage"][-1] == "사용량이 20% 늘거나 줄어도 추천은 바뀌지 않습니다."
 
 
 def test_captions_overage_and_keep(conn):
     over = documents.build_data(conn, "user_007")["captions"]
-    # 예상 60,000회 - 프로 제공량 50,000회 = 10,000회 초과 → 10 × 1,500원 = 15,000원
-    assert "API 호출은 10,000회 초과" in over["usage"][2]
-    assert over["composition"][-1] == "예상 사용량 기준으로 API 초과 요금 월 15,000원이 포함됩니다."
+    # 예상 60,000회 - 프로 제공량(3단계) 57,500회 = 2,500회 초과 → ⌈2.5⌉ × 1,500원 = 4,500원
+    assert "API 호출은 2,500회 초과" in over["usage"][2]
+    assert over["composition"][-1] == "예상 사용량 기준으로 API 초과 요금 월 4,500원이 포함됩니다."
     keep = documents.build_data(conn, "user_001")["captions"]
     assert "바꿀 필요가 없습니다" in keep["cumulative"][0]
     assert keep["composition"][0].startswith("지금 요금제(베이직)를 유지할 때")

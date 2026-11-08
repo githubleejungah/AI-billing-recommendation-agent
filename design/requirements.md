@@ -116,6 +116,15 @@ Slack 등 사내 공유에 쓰는 고정 가칭 코드입니다. 실무에서는
 | min_tenure_months | INTEGER | 가입 후 최소 이용 개월 수 (0이면 제한 없음) |
 | upgrade_only | INTEGER | 1이면 현재보다 상위 요금제로 바꿀 때만 적용 |
 
+### loyalty_tiers — 장기 이용 혜택 단계 (v3.5, T3d)
+
+| 컬럼 | 형식 | 설명 |
+|---|---|---|
+| tier (PK) | INTEGER | 1, 2, 3 |
+| tier_name | TEXT | 1단계, 2단계, 3단계 |
+| min_tenure_months | INTEGER (UNIQUE) | 필요한 가입 기간(6, 12, 24개월) |
+| bonus_pct | INTEGER | 모든 요금제 기본 제공량 추가 비율(5, 10, 15%) |
+
 ### app.db — 앱 전용 저장소 (v2.3 추천 이력, v3.0 확장)
 
 청구 DB는 읽기 전용(RET-01)이므로, 앱이 만드는 기록은 앱 전용 저장소 `data/app.db`에 둡니다. 고객은 가칭 코드(`code`)로 가리키고, 이름과 리포트 문장은 넣지 않습니다.
@@ -162,7 +171,7 @@ DB가 아니라 마크다운 파일입니다. 리포트의 **문장 근거**(왜
 - **성수기 판정 (v3.2)**: 기록이 24개월 이상인 고객만 판정합니다. 최근 24개월을 두 해(최근 12개월, 그 전 12개월)로 나누고, 해마다 API 호출과 스토리지 각각의 12개월 중앙값을 구합니다. 어떤 달의 사용량이 그해 중앙값의 1.3배 이상이면(API·스토리지 중 하나라도) 그해의 "높은 달"입니다. **두 해 모두** 같은 달(1~12월)이 높은 달이면 그 달을 성수기 월로 봅니다. 한 해만 높으면 일회성으로 보고 성수기로 보지 않습니다. 연속된 성수기 월은 한 묶음(예: 1~3월)으로 다룹니다. 배수(1.3)와 필요 기록(24개월)은 정책 파일 값입니다.
 - **계절 반영 예측 (v3.2)**: 성수기 월이 있는 고객은 비교 기간의 달마다 예상 사용량이 다릅니다. 그달 예상 = 최근 12개월 기록 중 같은 달 사용량("작년 같은 달") × 성장률이고, 성장률 = 최근 3개월 사용량 합 ÷ 작년 같은 3개월 합(API·스토리지 각각, 0.5~2.0 사이로 자름)입니다. API는 정수, 스토리지는 0.1GB 단위로 반올림합니다(0.5는 올림). 월별 일정, 12개월 총액, 추천, 추천 안정성(달마다 ±20%)은 모두 이 예측으로 계산합니다. 성수기가 없는 고객과 기록이 24개월 미만인 고객은 지금처럼 3개월 평균을 12개월 내내 씁니다. 그래서 기존 고객의 결과와 테스트 값은 바뀌지 않습니다. (T3b) 비교 기간 마지막 달(2027-11)의 같은 달은 아직 기록이 없는 2026-11이 아니라 2025-11입니다. 월 절감액(`monthly_saving`)은 할인 전 12개월 차이를 12로 나눈 값(0.5는 올림)으로 정의를 넓혔습니다. 달마다 금액이 같은 고객은 그전과 같은 값입니다.
 - **성수기 알림 일정 (v3.2)**: 요금제 변경은 다음 청구 주기부터 적용되므로, 성수기 묶음의 첫 달에 맞추려면 그 전달 말일까지 신청해야 합니다(신청 마감). 1차 알림은 묶음 첫 달 1일의 45일 전, 마감 전 알림은 신청 마감 7일 전입니다. 1차 날짜가 이미 지났어도 신청 마감 전이면 이번 선별에서 보냅니다. 날짜 값은 정책 파일에 둡니다.
-- **장기 이용 혜택 (v3.5)**: 가입 기간(기준일까지 꽉 찬 개월 수, 지금의 `tenure_months`)이 6개월·12개월·24개월 이상이면 각각 1단계·2단계·3단계입니다. 단계마다 모든 요금제의 기본 제공량(API 호출, 스토리지)을 정해진 비율만큼 늘려 계산합니다. 늘린 양은 내림해 정수(API 호출 수, GB)로 씁니다. 혜택은 고객에게 붙으므로 요금제를 바꿔도 유지됩니다. 그래서 비교하는 모든 요금제에 같은 단계를 적용합니다. 비교 기간 중에 다음 단계에 도달하면 그달부터 새 비율을 씁니다. 단계 기준과 비율은 원천 데이터(`loyalty_tiers` 표)에 둡니다. 비율은 1단계 5%, 2단계 10%, 3단계 15%입니다(결정 42, G1 변경 4 확정).
+- **장기 이용 혜택 (v3.5)**: 가입 기간(기준일까지 꽉 찬 개월 수, 지금의 `tenure_months`)이 6개월·12개월·24개월 이상이면 각각 1단계·2단계·3단계입니다. 단계마다 모든 요금제의 기본 제공량(API 호출, 스토리지)을 정해진 비율만큼 늘려 계산합니다. 늘린 양은 내림해 정수(API 호출 수, GB)로 씁니다. 혜택은 고객에게 붙으므로 요금제를 바꿔도 유지됩니다. 그래서 비교하는 모든 요금제에 같은 단계를 적용합니다. 비교 기간 중에 다음 단계에 도달하면 그달부터 새 비율을 씁니다. 단계 기준과 비율은 원천 데이터(`loyalty_tiers` 표)에 둡니다. 비율은 1단계 5%, 2단계 10%, 3단계 15%입니다(결정 42, G1 변경 4 확정). (T3d) 비교 기간 i번째 달(첫 달이 0)의 가입 기간은 "기준일 가입 기간 + i + 1"개월로 셉니다(기준일이 달의 첫날이므로 그달 1일 기준과 같음). 지금 월 청구액(`monthly`)과 리포트·서류의 "기본 제공량"은 기준일의 단계를 씁니다. 스토리지는 늘린 양을 GB 단위로 내립니다(베이직 50GB의 5%는 2.5 → 2GB).
 - **월별 일정 (v3.0)**: 비교 기간 12개월 각각의 기본 요금, 초과 요금, 할인, 합계를 계산합니다. 할인은 이벤트 할인 기간 동안의 달에만 들어갑니다. 12개월은 기준일 다음 달부터 셉니다(지금은 2026-12 ~ 2027-11). 요금제 변경이 적용되는 다음 청구 주기와 같습니다. 12개월 합계는 기존 12개월 총액과 같아야 합니다. 그래프와 서류의 월별 표가 이 값을 씁니다.
 
 ## 3. 요구사항 (EARS 형식)
@@ -205,7 +214,7 @@ DB가 아니라 마크다운 파일입니다. 리포트의 **문장 근거**(왜
 - **REP-03** 이용 기록이 없는 고객에 대해서는 추천하지 않고, 그 이유를 알려야 한다. (v3.5) 대신 "응대 안내"에 첫 사용(온보딩) 안내를 넣는다: 시작 안내 자료 보내기, 온보딩 상담 제안, 처음 쓸 기능 한 가지 안내, 다시 연락할 시점. 쓸 계획이 없는 고객에게는 이용 계획을 함께 점검하자고 정직하게 제안한다. 할인이나 요금제 변경은 권하지 않는다(결정 41). 이 안내는 응대 가이드(`guide_no_usage`)를 검색해 인용해야 한다(REP-05 확장). 지금은 이 고객에게 검색을 하지 않으므로(`test_no_usage_customer_gets_notice_without_search`) 이 테스트는 "가이드를 검색하고 인용한다"로 바뀐다.
 - **REP-04** (v2) 리포트가 문서를 인용하면(`[근거: 문서ID#번호]`), 그 조각은 이번 분석에서 검색 도구가 실제로 돌려준 것이어야 한다. (v2.1) 또 "대상 아님"으로 표시된 조각(KNW-06)을 추천 이유의 근거로 인용하면 안 된다. 어기면 리포트를 내보내지 않는다. (T4) "대상 아님 조각"은 조각이 다루는 이벤트가 **모두** 대상 아님인 조각이다(여러 이벤트를 다루는 응대 가이드는 하나라도 대상이면 쓸 수 있다). 응대 안내 구역에서 "왜 이 이벤트는 안 되는지" 설명하는 데는 인용할 수 있다.
 - **REP-05** (v2) 추천이 있는 리포트에는 "추천 이유"와 "응대 안내"에 근거 인용이 각각 하나 이상 있어야 한다. (v3.5) 이용 기록이 없는 고객의 리포트에는 "응대 안내"에 근거 인용이 하나 이상 있어야 한다.
-- **REP-06** (v3.5) 이탈 위험 고객의 리포트 "응대 안내"에는 현재 장기 이용 혜택 단계와 다음 단계까지 남은 개월 수를 자리표시자(`{loyalty_tier}`, `{loyalty_next_months}`)로 넣는다. 3단계 고객은 "최고 단계"로 안내한다. 숫자는 시뮬레이터 값이다.
+- **REP-06** (v3.5) 이탈 위험 고객의 리포트 "응대 안내"에는 현재 장기 이용 혜택 단계와 다음 단계까지 남은 개월 수를 자리표시자(`{loyalty_tier}`, `{loyalty_next_months}`)로 넣는다. 3단계 고객은 "최고 단계"로 안내한다. 숫자는 시뮬레이터 값이다. (T3d) 등록 파일의 `required_when = "churn"`으로 정한다. 최고 단계 고객은 `{loyalty_next_months}`의 값이 없어 필수가 아니고, `{loyalty_tier}` 값에 "최고 단계"가 들어간다. 두 키 모두 가입 기간에서 나온 값이라 `local_only`(PC 안에서만 채움)다.
 
 ### 보안 (SEC)
 - **SEC-01** API 키는 환경 변수(`.env`)로만 읽는다. 저장소와 로그에 남기지 않는다.
@@ -555,8 +564,8 @@ v3.6에서 추가한 결정입니다. 2026-11-08 G3 검토 중 사용자 제안,
 | OPS-02~04 운영 지표·개선 순환 | — | T13, T7 |
 | DEP-01~06 배포 | — | T16 |
 | REP-03, 05 (v3.5) 첫 사용 안내·인용 | `test_no_usage_report`, `test_no_usage_report_needs_onboarding_citation`, `test_no_usage_customer_searches_guide`(`test_no_usage_customer_gets_notice_without_search`를 바꿈), `test_no_usage_notice_without_citation_is_rewritten_then_rejected` | 완료 (T5b) |
-| REP-06 (v3.5) 이탈 위험 고객 혜택 안내 | (예정) `test_churn_risk_report_has_loyalty_placeholders` | T3d (G1 변경 4 후) |
-| LOY-01~05 (v3.5) 장기 이용 혜택 | (예정) 손으로 계산한 기대값: 단계 경계(5·6·11·12·23·24개월), 비교 기간 중 단계 도달, 요금제를 바꿔도 혜택 유지, 이벤트와 함께 받기, 지문 재기록 | T3d (G1 변경 4 후) |
+| REP-06 (v3.5) 이탈 위험 고객 혜택 안내 | `test_churn_risk_report_has_loyalty_placeholders`(필수 여부·응대 안내 구역·최고 단계), `test_churn_risk_below_top_tier_needs_remaining_months`, `test_loyalty_values_for_each_customer` | 완료 (T3d) |
+| LOY-01~05 (v3.5) 장기 이용 혜택 | `test_loyalty_tier_boundaries`(0·5·6·11·12·23·24·60개월), `test_loyalty_tiers_come_from_the_table`(LOY-02), `test_bonus_adds_to_included_amounts_rounded_down`, `test_next_tier_is_reached_during_the_horizon`, `test_bonus_stays_when_plan_changes`, `test_keep_with_loyalty_promotion`(LOY-03), `test_top_tier_and_no_usage_customers`, 손으로 다시 계산한 기대값(`test_simulator.py`, `test_seasonality.py` 등), `test_existing_200_customers_are_unchanged`(지문 재기록). 문서(LOY-04): `test_fourteen_documents_with_metadata_and_sections`, `test_knowledge_has_no_amounts_or_rates`. 서류·해설(LOY-05): `test_review_states_loyalty_tier`, `test_captions_for_user_002_match_hand_calculation`, `test_seasonal_captions` | 완료 (T3d) |
 | PRO-10, 11 (v3.5) 혜택 공지·단계 도달 알림 | — | T9 (G1 변경 4 후) |
 | CHG-01~07 셀프 변경 | `test_change_module_uses_no_ai`(CHG-01), `test_usage_change_after_confirmation_forces_reconfirm`, `test_tampered_quote_is_rejected`, `test_changed_recommendation_is_shown`(CHG-02), `test_quote_for_user_002_matches_hand_calculation`, `test_quote_equals_simulator_and_review_document`, `test_invoice_info_must_be_confirmed`, `test_downgrade_shows_notice_and_keep_is_not_changeable`(CHG-03), `test_member_cannot_change`, `test_only_admin_of_same_customer_can_cancel`(CHG-04), `test_cancel_before_deadline_then_new_request_allowed`, `test_cancel_after_deadline_is_refused`, `test_applied_request_cannot_be_cancelled`(CHG-05), `test_submit_records_request_history_audit_and_message`, `test_double_click_creates_one_request`, `test_simultaneous_insert_is_blocked_by_index`, `test_open_request_blocks_a_different_change`(CHG-06), `test_expired_notification_needs_reconfirm`, `test_stale_analysis_cannot_be_used`(CHG-07) | 완료 (T11). 사내 채널 실제 전송은 T5(NTF), 화면은 T13 |
 | DOC-01~07 서류 | `test_review_amounts_match_hand_calculation`, `test_confirmation_needs_change_and_has_no_expiry`(DOC-01), `test_xlsx_values_match`, `test_docx_values_match`, `test_pdf_values_match`(DOC-02, 03), `test_document_number_and_validity`(DOC-04), `test_issue_records_document_and_audit_without_name`(DOC-05), `test_same_input_same_hash`(DOC-06), `test_other_customer_is_denied`, `test_issue_does_not_write_files`(DOC-07), `test_schedule_mismatch_blocks_document` | 완료 (T10) |

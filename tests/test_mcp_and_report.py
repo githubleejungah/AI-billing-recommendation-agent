@@ -84,7 +84,8 @@ def test_rejects_malformed_user_id(db_path, tool):
 
 # --- 리포트 검증(REP-01~05) ---
 # Claude는 숫자 대신 자리표시자를 쓰고, 코드가 검증한 뒤 채운다. 기대값은 user_002의 손 계산 값이다
-# (베이직 월 129,000원, 프로 + 전환 3개월 30% 할인, 12개월 절감 660,000원(43%)).
+# (T3d 장기 혜택 반영: 베이직 월 124,500원(2단계 제공 11,000회·55GB), 프로 + 전환 3개월 30% 할인,
+#  월 절감 43,833원, 12개월 절감 598,000원(40%). 계산식은 test_simulator.py).
 
 GOOD_002 = """## 1. 현재 과금 분석
 현재 {current_plan} 요금제로 월 {current_monthly}이 예상됩니다. 최근 {forecast_months} 평균 API {avg_api_calls}, 스토리지 {avg_storage_gb}를 사용해
@@ -118,10 +119,11 @@ def retrieved_002(db_path):
 
 def test_good_draft_is_filled_with_simulator_values(sim_002, retrieved_002):
     text = report.verify_and_fill(GOOD_002, sim_002, retrieved_002)
-    assert "베이직 요금제로 월 129,000원이 예상됩니다" in text
+    assert "베이직 요금제로 월 124,500원이 예상됩니다" in text
     assert "최근 3개월 평균 API 42,000회, 스토리지 120GB" in text
+    assert "기본 제공량(11,000회, 55GB)" in text  # 지금 받는 장기 혜택(2단계) 반영
     assert "프로 요금제로 바꾸고 프로 전환 3개월 30% 할인을 받으세요" in text
-    assert "월 49,000원, 12개월 기준 660,000원(43%)을 절감합니다" in text
+    assert "월 43,833원, 12개월 기준 598,000원(40%)을 절감합니다" in text
     assert "사용량이 20% 줄거나 늘어도 같은 추천입니다" in text
     assert "{" not in text
 
@@ -256,6 +258,76 @@ def test_no_usage_report_can_mention_horizon(db_path):
 
 # --- 자리표시자 등록 파일(5.3) ---
 
+# --- 이탈 위험 고객의 장기 이용 혜택 안내(REP-06, v3.5) ---
+
+CHURN_DRAFT = """## 1. 현재 과금 분석
+현재 {current_plan} 요금제로 월 {current_monthly} 수준이며 최근 평균 API {avg_api_calls} 정도를 씁니다.
+## 2. 추천
+{rec_plan} 요금제를 그대로 쓰는 것이 맞습니다. [근거: {keep}]
+## 3. 응대 안내
+최근 접속이 크게 줄었습니다. 먼저 불편한 점을 묻습니다. 장기 이용 혜택은 {loyalty_tier} 입니다.{extra} [근거: {churn}]
+"""
+
+
+@pytest.fixture(scope="module")
+def churn_case(db_path):
+    sim = simulation(db_path, "user_015")  # 이탈 위험, 가입 44개월(최고 단계)
+    found = {}
+    for query in ("유지 추천 응대", "이탈 위험 고객 응대"):
+        found.update(search(db_path, query, "user_015"))
+    keep = next(i for i in found if i.startswith("guide_keep"))
+    churn = next(i for i in found if i.startswith("guide_churn_risk"))
+    return sim, found, {"keep": keep, "churn": churn}
+
+
+def _churn_draft(ids, extra="", where="guide"):
+    draft = CHURN_DRAFT.replace("{keep}", ids["keep"]).replace("{churn}", ids["churn"]).replace("{extra}", extra)
+    if where == "recommendation":  # 혜택 안내를 추천 구역으로 옮긴 초안
+        draft = draft.replace(" 장기 이용 혜택은 {loyalty_tier} 입니다.", "").replace(
+            "맞습니다. [근거", "맞습니다. 장기 이용 혜택은 {loyalty_tier} 입니다. [근거")
+    return draft
+
+
+def test_loyalty_values_for_each_customer(db_path, churn_case):
+    registry = report.load_registry()
+    top = report.values(churn_case[0], registry)
+    assert (top["loyalty_tier"], top["loyalty_next_months"], top["loyalty_next_tier"]) == (
+        "3단계(기본 제공량 15% 추가, 최고 단계)", None, None)
+    mid = report.values(simulation(db_path, "user_002"), registry)  # 19개월, 5개월 뒤 3단계
+    assert (mid["loyalty_tier"], mid["loyalty_next_months"], mid["loyalty_next_tier"]) == (
+        "2단계(기본 제공량 10% 추가)", "5개월", "3단계(기본 제공량 15% 추가)")
+    new = report.values(simulation(db_path, "user_004"), registry)  # 3개월
+    assert (new["loyalty_tier"], new["loyalty_next_months"]) == ("아직 없음(첫 단계는 가입 6개월부터)", "3개월")
+
+
+def test_churn_risk_report_has_loyalty_placeholders(db_path, churn_case):
+    sim, found, ids = churn_case
+    registry = report.load_registry()
+    # 최고 단계라 남은 개월 수는 값이 없어 필수가 아니다. 이탈 위험이 아닌 고객에게는 필수가 아니다.
+    assert "loyalty_tier" in report.required_keys(sim, registry)
+    assert "loyalty_next_months" not in report.required_keys(sim, registry)
+    assert not {"loyalty_tier", "loyalty_next_months"} & set(report.required_keys(simulation(db_path, "user_002"), registry))
+
+    text = report.verify_and_fill(_churn_draft(ids), sim, found)
+    assert "장기 이용 혜택은 3단계(기본 제공량 15% 추가, 최고 단계) 입니다." in text
+
+    missing = _churn_draft(ids).replace(" 장기 이용 혜택은 {loyalty_tier} 입니다.", "")
+    assert "필수 자리표시자 없음: {loyalty_tier}" in report.check_draft(missing, sim, found)
+    wrong_place = _churn_draft(ids, where="recommendation")
+    assert any("응대 안내" in p and "REP-06" in p for p in report.check_draft(wrong_place, sim, found))
+
+
+def test_churn_risk_below_top_tier_needs_remaining_months(db_path, churn_case):
+    sim, found, ids = churn_case
+    registry = report.load_registry()
+    mid = json.loads(json.dumps(sim))
+    mid["loyalty"] = simulation(db_path, "user_002")["loyalty"]  # 이탈 위험인데 아직 2단계인 경우
+    assert {"loyalty_tier", "loyalty_next_months"} <= set(report.required_keys(mid, registry))
+    assert "필수 자리표시자 없음: {loyalty_next_months}" in report.check_draft(_churn_draft(ids), mid, found)
+    text = report.verify_and_fill(_churn_draft(ids, extra=" 다음 단계까지 {loyalty_next_months} 남았습니다."), mid, found)
+    assert "다음 단계까지 5개월 남았습니다." in text
+
+
 def test_registry_matches_simulator_facts(db_path):
     registry = report.load_registry()
     known = set()
@@ -284,7 +356,9 @@ def test_seasonal_values(db_path):
     values = report.values(simulation(db_path, "user_201"), report.load_registry())
     assert values["peak_months"] == "1~3월, 5월"
     assert values["peak_deadline"] == "2026-12-31"
-    assert values["peak_bill_current"] == "855,000원"
+    # 1~3월 예상 110,000회·160GB(성장률 1.0), 3단계 제공 11,500회·57GB:
+    # 30,000 + ⌈98.5⌉×2,000 + 103×500 = 279,500 × 3 = 838,500
+    assert values["peak_bill_current"] == "838,500원"
     assert values["peak_evidence"] == "2025-01 평소의 5.0배, 2026-01 5.5배"
     assert values["forecast_method"] == "계절 반영"
 
@@ -297,5 +371,5 @@ def test_slack_message_uses_code_not_name(db_path, sim_002, retrieved_002):
     assert message["blocks"][0]["type"] == "header"
     dumped = json.dumps(message, ensure_ascii=False)
     assert "UQM-9GU" in dumped and "베타소프트" not in dumped and "user_002" not in dumped
-    assert "660,000원" in dumped and "**" not in dumped
+    assert "598,000원" in dumped and "**" not in dumped
     assert all(len(block.get("text", {}).get("text", "")) <= 3000 for block in message["blocks"])
