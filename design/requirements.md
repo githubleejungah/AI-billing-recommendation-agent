@@ -355,6 +355,13 @@ DB가 아니라 마크다운 파일입니다. 리포트의 **문장 근거**(왜
 - **ASK-04** 상담 연결 버튼은 언제나 보인다.
 - **ASK-05** 고객 질문 원문은 Claude와 Slack으로 보내기 전에 개인정보 형식(전화번호, 이메일, 사업자등록번호, 주민등록번호, 계좌번호, 고객 이름)을 가린다.
 - **ASK-06** AI 답변에도 리포트와 같은 검증(자리표시자, 인용, 전송 전 검사)을 적용한다.
+- **(T12) 구현 세부** (요구사항을 바꾸지 않고 정한 것)
+  - 분류 순서: 위험 주제(정책 파일 키워드) → 이상한 요청(지시 무시·프롬프트 요구 등, 코드 상수) → 금액 질문(얼마·청구액·절감액 등) → 그 밖은 조건·정책 질문. 앞의 둘은 Claude를 부르지 않고 바로 담당자 연결이다.
+  - 금액 질문은 Claude를 부르지 않고 정해진 문장 틀에 시뮬레이터 값을 채워 답한다(리포트 자리표시자와 같은 값). 이용 기록이 없으면 계산할 수 없으므로 담당자 연결("근거 없음")이다.
+  - 조건 질문: 코드가 가린 질문으로 고객용 문서만 검색한다(상위 3개). 결과가 없으면 담당자 연결. Claude 호출은 한 번이고 다시 쓰기는 하지 않는다. 검증에 실패하거나 Claude가 "문서로 답할 수 없음" 표시를 쓰거나 API 오류가 나면 담당자 연결이다. 틀린 답을 고쳐 내보내는 것보다 사람에게 넘기는 쪽이 안전하기 때문이다.
+  - 답변 검증: 등록된 자리표시자만, 값이 있는 것만, 자리표시자·인용 밖 숫자 금지, 한글 금액 금지, 인용 1개 이상이고 이번에 검색된 조각만. 채운 뒤 숫자는 시뮬레이터 결과와 대조한다.
+  - 상담 연결 이유는 위험 주제·이상한 요청·근거 없음·검증 실패·AI 오류·고객 요청 여섯 가지다(`tickets.reason`).
+  - 질문 원문은 앱 저장소에 남기지 않고 가린 질문만 남긴다(ESC-03의 "질문 원문"은 담당자가 실명 조회 뒤 고객에게 직접 확인한다). 개인정보를 최소로 모으기 위해서다.
 
 ### 데이터 품질 (DQ, v3.3)
 - **DQ-01** 월간 선별(PRO) 전에 이용 기록을 점검한다. 형식(필수 값, 자료형), 범위(API 호출·스토리지 0 이상, 활동일 0~31), 중복(고객·월), 연속성(최근 기록 중간에 빠진 달), 이상치(직전 3개월 중앙값의 5배 이상)를 본다.
@@ -564,7 +571,7 @@ v3.6에서 추가한 결정입니다. 2026-11-08 G3 검토 중 사용자 제안,
 | UI-10 (v3.6) 근거 보기 모달 | (예정) 인용 표시를 조각 원문과 연결하는 함수 테스트: 검색된 조각만 연결, 고객 화면에서 internal 조각 거부, 다시 검색하지 않음 | T8(목업), T13(구현) |
 | SIM-05, 06 월별 일정·부가세 | `test_schedule_starts_next_month_and_applies_discount_only_during_promotion`, `test_schedule_sums_match_twelve_month_totals`(SIM-05). `test_vat_is_ten_percent_rounded_down`, `test_twelve_month_totals_are_sums_of_months`, `test_saving_percent_rounds_half_up`(SIM-06) | 완료 (T3, T10) |
 | KNW-07 문서 대상 구분 | `test_guides_are_internal_and_others_customer`, `test_customer_search_never_returns_internal_documents`, `test_missing_audience_is_refused`, `test_tool_marks_audience` | 완료 (T4) |
-| EVAL-06 고객 질문 평가 | — | T12, T7 |
+| EVAL-06 고객 질문 평가 | `eval/customer_questions.json`(20개: 금액 3, 조건 5, 넘겨야 할 질문 12), `test_customer_question_set`, `test_no_must_escalate_question_was_answered_by_ai` | 세트·가짜 Claude 시험 완료 (T12). 실제 API 측정은 T7 |
 | PRO-01~06 선제 알림 | `test_saving_notice_for_user_002`(PRO-01, 03), `test_thresholds_come_from_policy`, `test_monthly_limit_keeps_peak_notices_first`, `test_low_data_customer_is_excluded_by_policy`, `test_churn_risk_and_no_usage_go_to_staff_only`(PRO-02), `test_records_summary_and_audit_have_codes_only`(PRO-04 미리보기, PRO-06, SEC-12), `test_same_month_rerun_does_not_repeat`, `test_rejected_recommendation_waits_until_next_quarter`, `test_opt_out_customer_gets_nothing`(PRO-05), `test_summary_is_sent_automatically_when_sender_exists`(NTF-02) | 완료 (T9) |
 | SIM-07, 08 성수기 판정·계절 반영 예측 | `test_tax_firm_peaks_and_evidence`, `test_gift_shop_peaks_but_growth_months_are_not_peaks`, `test_one_off_spike_is_not_a_peak`, `test_short_history_is_not_judged`, `test_threshold_is_inclusive_and_needs_both_years`, `test_bundles_wrap_around_new_year`(SIM-07), `test_tax_firm_monthly_forecast`, `test_gift_shop_growth_is_applied`, `test_tax_firm_recommendation_changes_with_season`, `test_three_month_average_alone_would_keep_basic`, `test_gift_shop_keeps_plan`, `test_upcoming_peak_and_extra_cost`, `test_growth_is_clamped`, `test_schedule_sums_match_totals_for_seasonal`(SIM-08), `test_existing_200_customers_are_unchanged`(결정 30) | 완료 (T3b) |
 | PRO-07~09 성수기 알림 | `test_seasonal_customers`(user_201 변경 권유·합치기·2026-11-17, user_202 예산 안내, user_203 없음), `test_reminder_in_december_only_after_first_notice`(2026-12-24, 묶음마다 두 번), `test_no_reminder_after_change_request` | 완료 (T9) |
@@ -585,8 +592,8 @@ v3.6에서 추가한 결정입니다. 2026-11-08 G3 검토 중 사용자 제안,
 | CHG-01~07 셀프 변경 | `test_change_module_uses_no_ai`(CHG-01), `test_usage_change_after_confirmation_forces_reconfirm`, `test_tampered_quote_is_rejected`, `test_changed_recommendation_is_shown`(CHG-02), `test_quote_for_user_002_matches_hand_calculation`, `test_quote_equals_simulator_and_review_document`, `test_invoice_info_must_be_confirmed`, `test_downgrade_shows_notice_and_keep_is_not_changeable`(CHG-03), `test_member_cannot_change`, `test_only_admin_of_same_customer_can_cancel`(CHG-04), `test_cancel_before_deadline_then_new_request_allowed`, `test_cancel_after_deadline_is_refused`, `test_applied_request_cannot_be_cancelled`(CHG-05), `test_submit_records_request_history_audit_and_message`, `test_double_click_creates_one_request`, `test_simultaneous_insert_is_blocked_by_index`, `test_open_request_blocks_a_different_change`(CHG-06), `test_expired_notification_needs_reconfirm`, `test_stale_analysis_cannot_be_used`(CHG-07) | 완료 (T11). 사내 채널 실제 전송은 T5(NTF), 화면은 T13 |
 | DOC-01~07 서류 | `test_review_amounts_match_hand_calculation`, `test_confirmation_needs_change_and_has_no_expiry`(DOC-01), `test_xlsx_values_match`, `test_docx_values_match`, `test_pdf_values_match`(DOC-02, 03), `test_document_number_and_validity`(DOC-04), `test_issue_records_document_and_audit_without_name`(DOC-05), `test_same_input_same_hash`(DOC-06), `test_other_customer_is_denied`, `test_issue_does_not_write_files`(DOC-07), `test_schedule_mismatch_blocks_document` | 완료 (T10) |
 | VIZ-01~04 그래프·해설 | `test_chart_pngs_open`, `test_chart_palette_order_is_fixed`, `test_korean_pdf_font_is_registered`. 해설(VIZ-04): `test_captions_for_user_002_match_hand_calculation`, `test_captions_overage_and_keep`, `test_captions_explain_stability_and_short_history`, `test_caption_numbers_come_from_document`, `test_captions_in_pdf_and_docx`, `test_captions_module_uses_no_ai`. 화면 표시와 그래프 아래 표(VIZ-02)는 T13 | 일부 (T10) |
-| ASK-05 질문 가림 | `test_mask_question_hides_each_format`(형식 10가지), `test_mask_keeps_ordinary_words` | 가림 함수 있음 (T5a). 상담 흐름 연결은 T12 |
-| ASK-01~04, 06 AI 상담 | — | T12 |
-| ESC-01~04 상담 연결 | — | T12 |
+| ASK-05 질문 가림 | `test_mask_question_hides_each_format`(형식 10가지), `test_mask_keeps_ordinary_words`, (T12) `test_personal_info_is_masked_before_claude_slack_and_storage`, `test_claude_request_carries_only_masked_question` | 완료 (T5a, T12) |
+| ASK-01~04, 06 AI 상담 | `test_disclosure_and_model_check`(ASK-01, 04), `test_customer_question_set`(ASK-02 분류), `test_amount_answer_uses_simulator_values`(ASK-02 금액), `test_condition_answer_is_filled_and_cited`, `test_no_search_result_goes_to_staff_without_ai`(ASK-03), `test_bad_or_missing_answers_go_to_staff`(ASK-03, 06) | 완료 (T12). 화면은 T13 |
+| ESC-01~04 상담 연결 | `test_ticket_flow_answer_and_faq`(접수 번호·답변 예정·사내 메시지·답변·FAQ 후보·다른 고객 접수 안 보임), `test_personal_info_is_masked_before_claude_slack_and_storage`(ESC-02) | 완료 (T12). 화면은 T13 |
 
 작업 번호(T1 등)는 [tasks.md](tasks.md)를 따릅니다.
